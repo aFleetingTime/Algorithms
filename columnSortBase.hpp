@@ -1,4 +1,5 @@
 #include <valarray>
+#include <iostream>
 #include <algorithm>
 
 namespace columnSortBase {
@@ -38,12 +39,10 @@ template<typename value_type>
 std::valarray<value_type> matrixPermutation(std::valarray<value_type> &ary, std::size_t r, std::size_t s)
 {
 	std::valarray<value_type> temp(ary.size() + r);
-	temp[std::slice(r / 2 * (s + 1), r / 2, s + 1)] = ary[std::slice(0, r / 2, s)];
-	temp[std::slice(s, r / 2, s + 1)] = ary[std::slice(s * (r / 2 + 1) - 1, r / 2, s)];
-	for (std::size_t i = 0; i < s - 1; ++i)
+	for (std::size_t i = 0; i < r / 2; ++i)
 	{
-		temp[std::slice(i + 1, r / 2, s + 1)] = ary[std::slice(i + s * (r / 2), r / 2, s)];
-		temp[std::slice((i + 1) + (s + 1) * (r / 2), r / 2, s + 1)] = ary[std::slice(i + 1, r / 2, s)];
+		temp[std::slice((s + 1) * (r / 2 + i), s, 1)] = ary[std::slice(i * s, s, 1)];
+		temp[std::slice((s + 1) * i + 1, s, 1)] = ary[std::slice((i + r / 2) * s, s, 1)];
 	}
 	return temp;
 }
@@ -52,7 +51,7 @@ template<typename value_type>
 std::valarray<value_type> reserveMatrixPermutation(std::valarray<value_type> &ary, std::size_t r, std::size_t s)
 {
 	std::valarray<value_type> temp(ary.size() - r);
-	for (std::size_t i = 0; i < s; ++i)
+	for (std::size_t i = 0; i < r / 2; ++i)
 	{
 		temp[std::slice(i * s, s, 1)] = ary[std::slice((s + 1) * (r / 2 + i), s, 1)];
 		temp[std::slice((i + r / 2) * s, s, 1)] = ary[std::slice((s + 1) * i + 1, s, 1)];

@@ -1,12 +1,12 @@
 #pragma once
-#include <iostream>
 #include <stack>
-#include <vector>
 #include <memory>
 #include <iterator>
+#include <iostream>
 #include <algorithm>
 #include <type_traits>
 
+namespace mymap {
 template<typename Key, typename Value, typename Compare>
 class Map;
 
@@ -28,47 +28,12 @@ public:
 		return this == p->left ? p->left : p->right;
 	}
 
-	Node *p, *left, *right;
+	Node *p;
+	Node *left;
+	Node *right;
 	Color color;
 	Value *value;
 };
-
-template<typename Node>
-bool isRBT(Node *root, Node *nil)
-{
-	if (root->color != Color::black) return false;
-	std::stack<std::pair<Node*, int>> s;
-	s.push({root, 0});
-	std::vector<int> vec;
-	while (!s.empty())
-	{
-		auto p = s.top(); s.pop();
-		bool b = p.first->color == Color::black;
-		if (p.first->left == nil && p.first->right == nil)
-		{
-			vec.push_back(p.second + b);
-			continue;
-		}
-		if (p.first->right != nil)
-		{
-			if (p.first->color == Color::red && p.first->right->color != Color::black)
-				return false;
-			s.push({p.first->right, p.second + b});
-		}
-		if (p.first->left != nil)
-		{
-			if (p.first->color == Color::red && p.first->left->color != Color::black)
-				return false;
-			s.push({p.first->left, p.second + b});
-		}
-	}
-	int h = vec.back();
-	vec.pop_back();
-	for (int v : vec)
-		if (v != h) return false;
-	return true;
-}
-
 
 template<typename Node>
 class Iterator;
@@ -199,6 +164,20 @@ public:
 		if (current == &nil)
 			root = temp;
 		else {
+#if 0
+			node_type* node_type::*flag;
+			while (true)
+			{
+				if (comp(value.first, current->value->first))
+					flag = &node_type::left;
+				else if (comp(current->value->first, value.first))
+					flag = &node_type::right;
+				else return { iterator(current, &nil), false };
+				if (current->*flag == &nil)
+					break;
+				current = current->*flag;
+			}
+#endif
 			iterator current = find(value.first);
 			if (current.node != &nil)
 				return { current, false };
@@ -215,41 +194,49 @@ public:
 
 	iterator erase(const iterator &value)
 	{
-		if (value.node == &nil) return value;
+		if (value.node == &nil) throw;//return value;
 		node_type *result, *x, *temp;
 		Color oldColor = value.node->color;
 		if (value.node->left == &nil)
 		{
-			result = (++iterator(value.node, &nil)).node;
+			//result = (++iterator(value.node, &nil)).node;
+			if (value.node->right == &nil) std::cout << "true" << std::endl;
 			x = transplant(value.node, value.node->right);
+			nil.p = value.node->right;
 		}
 		else if (value.node->right == &nil)
 		{
-			result = (++iterator(value.node, &nil)).node;
+			//result = (++iterator(value.node, &nil)).node;
 			x = transplant(value.node, value.node->left);
+			nil.p = value.node->left;
 		}
 		else
 		{
 			temp = value.node->right;
 			while (temp->left != &nil) temp = temp->left;
-			std::swap(temp->color, oldColor);
+			oldColor = temp->color;
 			x = temp->right;
-			if (temp->p != value.node)
+			if (temp->p == value.node)
+				x->p = temp;
+			else
 			{
 				transplant(temp, temp->right);
+				if (temp->right == &nil) nil.p = temp;
 				temp->right = value.node->right;
 				temp->right->p = temp;
 			}
-			else x->p = temp;
 			result = transplant(value.node, temp);
 			temp->left = value.node->left;
 			temp->left->p = temp;
+			temp->color = value.node->color;
 		}
 		--nodeCount;
 		delete value.node;
+		if (x != &nil && (x->p != value.node || x->p != value.node->left || x->p != value.node->right || x->p != temp)) throw;
 		if (oldColor == Color::black)
 			eraseFixup(x);
-		return iterator(result, &nil);
+		nil.left = nil.right = root;
+		return iterator(result ? result : temp, &nil);
 	}
 
 	iterator find(const Key &key)
@@ -294,7 +281,6 @@ public:
 	size_type size() const noexcept { return nodeCount; }
 
 	iterator begin() noexcept {
-		nil.left = nil.right = root;
 		return ++iterator(&nil, &nil);
 	}
 	iterator end() noexcept { return iterator(&nil, &nil); }
@@ -328,7 +314,8 @@ private:
 					node = node->p;
 					rotate(node, a, b);
 				}
-				std::swap(node->p->color, node->p->p->color);
+				node->p->color = Color::black;
+				node->p->p->color = Color::red;
 				rotate(node->p->p, b, a);
 			}
 		}
@@ -346,13 +333,14 @@ private:
 			node_type *w = node->p->*a;
 			if (w->color == Color::red)
 			{
-				std::swap(w->color, node->p->color);
+				//std::swap(w->color, node->p->color);
+				w->color = Color::black;
+				node->p->color = Color::red;
 				rotate(node->p, a, b);
 				w = node->p->*a;
 			}
 			if ((w->*a)->color == Color::black && (w->*b)->color == Color::black)
 			{
-				if (w == &nil) throw;
 				w->color = Color::red;
 				node = node->p;
 			}
@@ -360,8 +348,10 @@ private:
 			{
 				if ((w->*a)->color == Color::black)
 				{
-					std::swap((w->*b)->color, w->color);
-					specialRotation(w, b, a);
+					//std::swap((w->*b)->color, w->color);
+					(w->*b)->color = Color::black;
+					w->color = Color::red;
+					rotate(w, b, a);
 					w = node->p->*a;
 				}
 				w->color = node->p->color;
@@ -393,26 +383,6 @@ private:
 		node->*a = std::exchange((node->*a)->*b, node);
 	}
 
-	void specialRotation(node_type *node, node_type* (node_type::*a), node_type* (node_type::*b)) noexcept
-	{
-		(node->*a)->p = node->p;
-		if (node->p == &nil)
-			root = node->*a;
-		else node->child() = node->*a;
-		node->p = node->*a;
-		if ((node->*a)->*b != &nil) // 判断node->*a->*b是否为nil再对node->*a->*b->p进行赋值。
-			((node->*a)->*b)->p = node;
-		/*
-		 * 如果不加((node->*a)->*b != &nil)的判断，则eraseFixup在特定情况下无法正确执行。
-		 * 原因如下:
-		 * 假设RB-DELETE-FIXUP的参数x为nil(在待删除结点没有左孩子或右孩子，或者后继没有右孩子时为nil)
-		 * 但凡进入情况3，RB-DELETE-FIXUP第15行(情况3)会对x的兄弟结点w进行左旋/右旋，
-		 * 如果w相应参与旋转的孙子结点为nil (node->*a->*b == &nil)，而旋转过程没有判断直接赋值给参数为nil的父结点，
-		 * 则相当于将同为nil的x的父结点p赋值为w，随后从情况3执行情况4，而情况4的第17、20行将引用错误的结点w。
-		 */
-		node->*a = std::exchange((node->*a)->*b, node);
-	}
-
 	void leftRotate(node_type *node) noexcept {
 		rotate(node, &node_type::right, &node_type::left);
 	}
@@ -421,3 +391,4 @@ private:
 		rotate(node, &node_type::left, &node_type::right);
 	}
 };
+}
