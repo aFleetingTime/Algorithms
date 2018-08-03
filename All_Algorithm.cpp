@@ -22,11 +22,11 @@
 #include <iterator>
 #include <iostream>
 
+namespace test {
 // 编译阶段查看类型
 template<typename> int type();
 
-namespace test {
-// 测试用打印
+// 打印
 template<typename Func, typename T, typename... Argv>
 void print(const T& first, Func func = [](auto &v) { std::cout << v << ' '; }, const Argv&... argv)
 {
@@ -42,7 +42,7 @@ void print(const T& first, const Argv&... argv)
 	for (const auto &value : first)
 		std::cout << value << ' ';
 	std::cout << '\n';
-	if constexpr (sizeof...(Argv))	// 如果没有额外参数，结束递归。
+	if constexpr (sizeof...(Argv))
 		print(argv...);
 }
 
@@ -62,7 +62,7 @@ struct GetMemFuncArgs<R(C::*)(A)> {
 	using result_type = R;
 	using parameter = std::remove_reference_t<std::remove_const_t<A>>;
 };
-// 存入随机数
+// 产生随机数
 template<typename Container, typename RandomEngine,
 		 typename Return = void, typename Value = typename Container::const_reference>
 void loadRandomNum(Container &cont, RandomEngine rand, std::size_t count, Return(Container::*op)(const Value&) = &Container::push_back) {
@@ -391,6 +391,7 @@ auto LCSlength(InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {}
 	createLCS(lengths, xb, std::prev(xe), yb, std::prev(ye), --res.end(), comp);
 	return res;
 }
+// 最长公共子序列长度
 template<typename InputIt, typename Compare = std::equal_to<typename std::iterator_traits<InputIt>::value_type>>
 std::size_t LCS(InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {})
 {
@@ -506,7 +507,7 @@ auto recMatrixChainMultiply(InputIt beg, InputIt end)
 	return std::pair(results, indexes);
 }
 
-// 钢条切割问题 - O(n(n+1)/2)->O(n^2)
+// 钢条切割问题 - O(n^2)
 template<typename InputIt>
 std::vector<typename std::iterator_traits<InputIt>::value_type> baseCutRod(InputIt prices, std::intmax_t n, std::intmax_t c)
 {
@@ -690,19 +691,7 @@ InputIt select(InputIt first, InputIt last, std::size_t i, Compare comp = {})
 #if 0
 // K分位数
 template<typename InputIt, typename OutputIt, typename Compare = std::less<typename std::iterator_traits<InputIt>::value_type>>
-void findQuantile(InputIt first, InputIt last, OutputIt dest, std::size_t k, Compare comp = Compare{})
-{
-	if (first == last) return;
-	auto mid = algo::randomPartition(first, last, std::default_random_engine(std::random_device()()), comp);
-	if (auto n = std::distance(first, mid); n == k - 1)
-	{
-		*dest++ = *mid;
-		findQuantile(mid, last, dest, k);
-	}
-	else if (k < n)
-		return recSelect(first, mid, i, comp);
-	else return recSelect(mid, last, i - k - 1, comp);
-}
+InputIt findQuantile(InputIt first, InputIt last, OutputIt dest, std::size_t k, Compare comp = Compare{});
 #endif
 
 // 划分
@@ -1482,16 +1471,10 @@ int main(int argv, char **)
 
 	// random
 	auto rand = std::bind(std::uniform_int_distribution<int>(0, 100), std::default_random_engine(std::random_device()()));
-	auto rand2 = std::bind(std::uniform_int_distribution<int>(0, 25), std::default_random_engine(241235));
+	std::vector<int> v;
 
 	// init
 
 	timer.start();
-
-	std::vector<std::vector<int>> v { {1,7,4,3,2,2,2,9,2,6},{3,6,6,1,0,5,9,6,3,8},{1,5,4,5,3,8,7,2,5,6},{5,7,6,9,0,8,1,4,7,5},{0,2,1,9,5,3,6,5,9,9},{5,3,6,1,8,9,0,7,4,7},{6,9,4,2,0,6,0,3,2,9},{8,3,3,1,2,9,5,8,6,6},{9,1,9,5,4,7,6,4,5,0},{4,1,1,8,5,1,7,5,4,9},{6,4,4,9,8,8,8,5,8,4},{1,7,7,3,2,4,0,9,8,7},{1,4,0,3,5,5,4,2,2,1},{3,0,5,8,0,3,6,0,0,5},{7,2,4,6,5,7,0,7,8,1},{7,9,5,7,4,0,5,1,4,9},{2,8,0,9,8,2,5,6,2,5},{3,9,9,8,6,4,7,8,4,5},{9,1,6,5,0,3,5,5,4,0} };
-
-	//std::cout << minPathSum(v) << std::endl;
-	std::cout << v.size() << std::endl;
-	std::cout << v.front().size() << std::endl;
 	std::cout << "用时: " << timer.finish().count() << std::endl;
 }
