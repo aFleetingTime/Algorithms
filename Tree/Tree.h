@@ -10,8 +10,6 @@
  * 3. Node类型需定义null结点。
  * 4. BalanceStrategy继承链必须包含一个哨兵sentry，并维护哨兵的左孩子、右孩子和父结点总是指向正确的位置，Tree通过提供给迭代器sentry实现对树各结点的迭代。
  * 5. Node定义iterator_result_type指定迭代器返回类型。
- *
- *
  */
 
 

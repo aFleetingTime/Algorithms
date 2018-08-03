@@ -1,6 +1,4 @@
 #include "columnSortBase.hpp"
-//#include "Tree/RedBlackTree.h"
-//#include "RB-Tree/Map.hpp"
 #include <iomanip>
 #include <fstream>
 #include <queue>
