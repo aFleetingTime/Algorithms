@@ -1,4 +1,5 @@
 #include "columnSortBase.hpp"
+#include "Tree/node/RedBlackTree.h"
 #include <iomanip>
 #include <fstream>
 #include <queue>
@@ -1470,11 +1471,41 @@ int main(int argv, char **)
 	test::Timer<> timer;
 
 	// random
-	auto rand = std::bind(std::uniform_int_distribution<int>(0, 100), std::default_random_engine(std::random_device()()));
-	std::vector<int> v;
+	auto rand = std::bind(std::uniform_int_distribution<int>(0, 2000000000), std::default_random_engine(std::random_device()()));
 
 	// init
+	Tree<int, node::RedBlackNode> t;
+	std::vector<int> v, d;
+	test::loadRandomNum(v, rand, 2500000);
+	for (int i : v)
+		t.insert(i);
+	std::random_shuffle(v.begin(), v.end());
 
+	// test
 	timer.start();
+	for (int i = 0; i < 2000000; ++i)
+	{
+		auto it = t.find(v[i]);
+		if (it == t.end())
+			throw;
+		t.erase(it);
+	}
 	std::cout << "用时: " << timer.finish().count() << std::endl;
+	std::cout << "size: " << t.size() << std::endl;
+
+	// check
+	v.erase(v.begin(), v.begin() + 2000000);
+	std::sort(v.begin(), v.end());
+	auto b = t.begin();
+	std::cout << std::boolalpha;
+	for (int i : v)
+	{
+		if (*b != i)
+			break;
+		++b;
+	}
+	if (b == t.end()) std::cout << true << std::endl;
+	else std::cout << false << std::endl;
+	std::cout << (t.find(888888888) == t.end()) << std::endl;
+	std::cout << *(--t.end()) << ' ' << v.back() << std::endl;
 }

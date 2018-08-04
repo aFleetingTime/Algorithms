@@ -1,5 +1,5 @@
 #pragma once
-#include "Tree.h"
+#include "../Tree.h"
 #include "../basic/NodeBase.h"
 
 namespace node {
@@ -10,6 +10,9 @@ class RedBlackNode : public basic::BasicNode<RedBlackNode<Key>> {
 	struct RbTreeBalanceStrategy;
 	struct RedBlackTreeSentry;
 
+	enum class RBcolor : bool { red = true, black = false } color;
+	Key val;
+	
 public:
 	template<typename Comp, template<typename> typename TreeOperation = basic::DefaultTreeOperation>
 	using BalanceStrategy = RbTreeBalanceStrategy<Comp, TreeOperation>;
@@ -17,26 +20,28 @@ public:
 	using Sentry = RedBlackTreeSentry;
 
 	using value_type = Key;
-	using key_type = Key;
 	using basic_node = basic::BasicNode<RedBlackNode<Key>>;
-	using iterator_result_type = const Key;
-
-	enum class RBcolor : bool { red = true, black = false } color;
 
 	RedBlackNode(RBcolor c = RBcolor::red) : basic_node(&null, &null, &null), color(c), val{} { }
-	RedBlackNode(key_type&& args) : basic_node(&null, &null, &null), color(RBcolor::red), val(args) { }
-	RedBlackNode(const key_type &args) : basic_node(&null, &null, &null), color(RBcolor::red), val(args) { }
+	RedBlackNode(value_type &&v) : basic_node(&null, &null, &null), color(RBcolor::red), val(std::move(v)) { }
+	RedBlackNode(const value_type &v) : basic_node(&null, &null, &null), color(RBcolor::red), val(v) { }
+	template<typename... Args>
+	RedBlackNode(Args&&... args) : basic_node(&null, &null, &null), color(RBcolor::red), val(std::forward<Args>(args)...) { }
+
 	RedBlackNode(const RedBlackNode&) = default;
 	RedBlackNode& operator=(const RedBlackNode&) = default;
+	RedBlackNode(RedBlackNode&&) = default;
+	RedBlackNode& operator=(RedBlackNode&&) = default;
 
 	bool empty() const noexcept { return this == &null; }
 	explicit operator bool() const noexcept { return this == &null; }
 
-	const key_type& key() const { return val; }
-	const key_type& value() const { return val; }
+	value_type& value() { return val; }
+	const value_type& value() const { return val; }
 
 	static RedBlackNode null;
-	const key_type val;
+
+private:
 };
 
 template<typename Key>
@@ -148,7 +153,7 @@ struct RedBlackNode<Key>::RbTreeBalanceStrategy : public TreeOp<RedBlackNode<Key
 		}
 	}
 
-	const node_type* find(const node_type *root, const typename node_type::key_type &key) const {
+	const node_type* find(const node_type *root, const typename Compare::key_type &key) const {
 		return TreeOperation::findNode(root, key, comp);
 	}
 

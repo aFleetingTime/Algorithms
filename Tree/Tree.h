@@ -2,37 +2,40 @@
 #include <stack>
 #include <memory>
 #include "component/Iterator.h"
+#include "component/TreeHelper.hpp"
 #include "basic/BasicTreeOperation.h"
 
+
 /* Tree: 
- * 1. 平衡策略由结点类型定义的BalanceStrategy决定。
+ * 1. 平衡策略由结点类型定义的BalanceStrategy实现。
  * 2. 要求BalanceStrategy定义insert、erase和find实现树的操作，树的平衡由BalanceStrategy维护。
  * 3. Node类型需定义null结点。
  * 4. BalanceStrategy继承链必须包含一个哨兵sentry，并维护哨兵的左孩子、右孩子和父结点总是指向正确的位置，Tree通过提供给迭代器sentry实现对树各结点的迭代。
- * 5. Node定义iterator_result_type指定迭代器返回类型。
+ * 5. BalanceStrategy需要有一个模板参数，该参数通过Tree的模板参数Compare传递给BalanceStrategy，以提供树的比较函数对象。
  */
 
 
-template<typename Key, template<typename> typename Node, typename Compare = std::less<Key>, typename Alloc = std::allocator<Node<Key>>>
-class Tree : private Node<Key>::template BalanceStrategy<Compare>
+template<typename Key, template<typename> typename Node, typename Compare = CompareAux<Key, std::less<Key>>, typename Alloc = std::allocator<Node<Key>>>
+class Tree : protected Node<Key>::template BalanceStrategy<toCompareAux<Key, Compare>>
 {
 public:
 	using node_type = Node<Key>;
-	using value_type = typename node_type::value_type;
-	using key_type = typename node_type::key_type;
+	using balance = typename node_type::template BalanceStrategy<Compare>;
+	using compare = toCompareAux<Key, Compare>;
+	using value_type = typename compare::value_type;
+	using key_type = typename compare::key_type;
 	using pointer = value_type*;
 	using const_pointer = const value_type*;
 	using reference = std::add_lvalue_reference_t<value_type>;
 	using const_reference = std::add_const_t<reference>;
-	using iterator = component::Iterator<node_type>;
-	using const_iterator = component::ConstIterator<node_type>;
+	using iterator = ConstIterator<node_type>;
+	using const_iterator = ConstIterator<node_type>;
 	using allocator_type = Alloc;
 	using size_type = std::size_t;
-	using balance = typename Node<Key>::template BalanceStrategy<Compare>;
 
 	Tree() : root(&node_type::null), nodeCount(0) { }
-	Tree(std::initializer_list<value_type> list) : root(&node_type::null), nodeCount(0) {
-		for (const value_type &v : list)
+	Tree(std::initializer_list<value_type> init) : root(&node_type::null), nodeCount(0) {
+		for (const value_type &v : init)
 			insert(v);
 	}
 	template<typename InputIt>
@@ -43,6 +46,19 @@ public:
 			std::advance(first, 1);
 		}
 	}
+	Tree(std::initializer_list<value_type> init, const Compare &c) : balance(c) {
+		for (const value_type &v : init)
+			insert(v);
+	}
+	template<typename InputIt>
+	Tree(InputIt first, InputIt last, const Compare &c) : balance(c) {
+		while (first != last)
+		{
+			emplace(*first);
+			std::advance(first, 1);
+		}
+	}
+
 
 	Tree(const Compare &c) : balance(c), root(&node_type::null), nodeCount(0) { }
 
@@ -52,22 +68,7 @@ public:
 		rhs.nodeCount = 0;
 	}
 
-	void swap(Tree &rhs) noexcept {
-		std::swap(alloc, rhs.alloc);
-		std::swap(root, rhs.root);
-		std::swap(nodeCount, rhs.nodeCount);
-		balance::swap(rhs);
-	}
 
-	template<typename InputIt>
-	Tree(InputIt first, InputIt last, const Compare &c = Compare{}) : balance(c) {
-		for (; first != last; ++first)
-			insert(*first);
-	}
-	Tree(std::initializer_list<value_type> init, const Compare &c = Compare{}) : balance(c) {
-		for (const value_type &v : init)
-			insert(v);
-	}
 	~Tree() {
 		if (root == &node_type::null) return;
 		std::stack<node_type*> s;
@@ -82,14 +83,25 @@ public:
 		}
 	}
 
-	iterator insert(const value_type &key) {
+	void swap(Tree &rhs) noexcept {
+		std::swap(alloc, rhs.alloc);
+		std::swap(root, rhs.root);
+		std::swap(nodeCount, rhs.nodeCount);
+		balance::swap(rhs);
+	}
+
+
+	const_iterator insert(const value_type &key) {
 		node_type *newNode = createNode(key);
 		balance::insert(root, newNode);
 		++nodeCount;
 		return iterator(newNode);
 	}
+	iterator insert(value_type &&key) {
+		return emplace(std::move(key));
+	}
 	template<typename... Args>
-	iterator emplace(Args&&... args)
+	const_iterator emplace(Args&&... args)
 	{
 		node_type *newNode = createNode(std::forward<Args>(args)...);
 		balance::insert(root, newNode);
@@ -97,25 +109,23 @@ public:
 		return iterator(newNode);
 	}
 
-	iterator erase(iterator it) {
+	const_iterator erase(const_iterator it) {
 		iterator temp = it;
-		balance::erase(root, temp.node);
-		destroyNode(temp.node);
+		balance::erase(root, const_cast<node_type*>(temp.node));
+		destroyNode(const_cast<node_type*>(temp.node));
 		--nodeCount;
 		return it;
 	}
 
-	iterator find(const key_type &key) {
-		return iterator(const_cast<node_type*>(balance::find(root, key)));
-	}
 	const_iterator find(const key_type &key) const {
-		return const_iterator(balance::find(root, key));
+		const node_type *target = balance::find(root, key);
+		return (target == &node_type::null) ? cend() : const_iterator(target);
 	}
 
-	iterator begin() noexcept { return iterator(this->sentry.sentry, iterator::createBegin); }
-	iterator end() noexcept { return iterator(this->sentry.sentry); }
 	const_iterator begin() const noexcept { return const_iterator(this->sentry.sentry, const_iterator::createBegin); }
 	const_iterator end() const noexcept { return const_iterator(this->sentry.sentry); }
+	const_iterator cbegin() const noexcept { return begin(); }
+	const_iterator cend() const noexcept { return end(); }
 	
 	size_type size() const noexcept { return nodeCount; }
 
@@ -150,3 +160,68 @@ private:
 
 template<typename Key, template<typename> typename Node, typename Compare, typename Alloc>
 void std::swap(Tree<Key, Node, Compare, Alloc> &lhs, Tree<Key, Node, Compare, Alloc> &rhs) { lhs.swap(rhs); }
+
+template<typename Key, typename Value, template<typename> typename Node,
+	     typename Compare = std::less<Key>, typename Alloc = std::allocator<Node<std::pair<const Key, Value>>>>
+class MapTree : public Tree<std::pair<const Key, Value>, Node, toMapCompareAux<Key, Value, Compare>, Alloc>
+{
+	using base = Tree<std::pair<const Key, Value>, Node, toMapCompareAux<Key, Value, Compare>, Alloc>;
+
+public:
+	using mapped_type = typename base::value_type::second_type;
+	using iterator = Iterator<typename base::node_type>;
+
+	using base::base;
+
+	iterator insert(const typename base::value_type &key) {
+		return iterator(const_cast<typename base::node_type*>(base::insert(key).node));
+	}
+	template<typename... Args>
+	iterator emplace(Args&&... args) {
+		return iterator(const_cast<typename base::node_type*>(base::emplace(std::forward<Args>(args)...).node));
+	}
+	iterator insert(typename base::value_type &&key) {
+		return emplace(std::move(key));
+	}
+
+	iterator erase(typename base::const_iterator it) {
+		return iterator(const_cast<typename base::node_type*>(base::erase(it).node));
+	}
+
+	iterator find(const typename base::key_type &key) {
+		return iterator(const_cast<typename base::node_type*>(base::find(key).node));
+	}
+	typename base::const_iterator find(const typename base::key_type &key) const {
+		return base::find(key);
+	}
+
+	mapped_type& operator[](const typename base::key_type &key)
+	{
+		iterator res = find(key);
+		if (res.node != &base::node_type::null)
+			return res->second;
+		return insert(typename base::value_type{key, {}})->second;
+	}
+	mapped_type& operator[](typename base::key_type &&key)
+	{
+		iterator res = find(key);
+		if (res.node != &base::node_type::null)
+			return res->second;
+		int i = 0;
+		return insert(typename base::value_type{std::move(key), {}})->second;
+	}
+
+	mapped_type& at(const typename base::key_type &key) {
+		return const_cast<mapped_type&>(const_cast<const MapTree&>(*this).at(key));
+	}
+	const mapped_type& at(const typename base::key_type &key) const
+	{
+		typename base::const_iterator res = find(key);
+		if (res.node == &base::node_type::null)
+			throw std::out_of_range("");
+		return res->second;
+	}
+
+	iterator begin() noexcept { return iterator(this->sentry.sentry, iterator::createBegin); }
+	iterator end() noexcept { return iterator(this->sentry.sentry); }
+};

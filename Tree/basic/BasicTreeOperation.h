@@ -6,23 +6,23 @@ namespace basic {
 template<typename Node>
 struct DefaultIteratorOperation
 {
-	const Node* precursor(Node *node) const {
+	const Node* precursor(const Node *node) const {
 		return toNext(node, &Node::left, &Node::right);
 	}
-	const Node* successor(Node *node) const {
+	const Node* successor(const Node *node) const {
 		return toNext(node, &Node::right, &Node::left);
 	}
-	const Node* min(Node *node) const { return minmax(node, &Node::left); }
-	const Node* max(Node *node) const { return minmax(node, &Node::right); }
+	const Node* min(const Node *node) const { return minmax(node, &Node::left); }
+	const Node* max(const Node *node) const { return minmax(node, &Node::right); }
 
 private:
-	const Node* minmax(Node *node, Node* Node::*dire) const
+	const Node* minmax(const Node *node, Node* Node::*dire) const
 	{
 		while (node->*dire != &Node::null)
 			node = node->*dire;
 		return node;
 	}
-	const Node* toNext(Node *node, Node* Node::*a, Node* Node::*b) const
+	const Node* toNext(const Node *node, Node* Node::*a, Node* Node::*b) const
 	{
 		if (node == &Node::null) return node;
 		if (node->*a != &Node::null)
@@ -73,7 +73,7 @@ auto findInsertionPoint(const Node *root, const Node *key, const Compare &comp) 
 	Node* Node::*dire;
 	while (true)
 	{
-		if (comp(key->key(), root->key()))
+		if (comp(key->value(), root->value()))
 			dire = &Node::left;
 		else dire = &Node::right;
 		if (root->*dire == &Node::null) break;
@@ -83,13 +83,13 @@ auto findInsertionPoint(const Node *root, const Node *key, const Compare &comp) 
 }
 
 template<typename Compare>
-const Node* findNode(const Node *root, const typename Node::value_type &key, const Compare &comp) const
+const Node* findNode(const Node *root, const typename Compare::key_type &key, const Compare &comp) const
 {
 	while (root != &Node::null)
 	{
-		if (comp(key, root->key()))
+		if (comp(key, root->value()))
 			root = root->left;
-		else if (comp(root->key(), key))
+		else if (comp(root->value(), key))
 			root = root->right;
 		else break;
 	}

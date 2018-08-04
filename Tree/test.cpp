@@ -1,4 +1,6 @@
 #include <iostream>
+#include <string>
+#include <map>
 #include <random>
 #include "node/RedBlackTree.h"
 #include <functional>
@@ -42,14 +44,16 @@ bool isRBT(Node *root, Node *nil)
 int main()
 {
 	auto rand = std::bind(std::uniform_int_distribution<>(1, 150000000), std::default_random_engine(std::random_device()()));
-	Tree<int, node::RedBlackNode> t;
+	using Map = MapTree<int, int, node::RedBlackNode, std::greater<int>>;
+	Map t;
+
+#if 0
 	Tree<int, node::RedBlackNode> tt;
 	std::swap(tt, t);
 	std::cout << "1" << std::endl;
 	t.begin();
 	std::cout << "2" << std::endl;
 	tt.begin();
-#if 0
 	Tree<int, RedBlackNode> t;
 	std::vector<int> v;
 	v.resize(4561213);
