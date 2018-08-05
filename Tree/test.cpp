@@ -44,8 +44,9 @@ bool isRBT(Node *root, Node *nil)
 int main()
 {
 	auto rand = std::bind(std::uniform_int_distribution<>(1, 150000000), std::default_random_engine(std::random_device()()));
-	using Map = MapTree<int, int, node::RedBlackNode, std::greater<int>>;
+	using Map = Tree<int, node::RedBlackNode, std::greater<int>>;
 	Map t;
+	t.insert(1);
 
 #if 0
 	Tree<int, node::RedBlackNode> tt;

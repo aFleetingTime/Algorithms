@@ -43,7 +43,7 @@ struct Iterator : private Node::IterativeStrategy {
 	template<typename Key, template<typename> typename N, typename Compare, typename Alloc>
 	friend class Tree;
 	template<typename Key, typename Value, template<typename> typename N, typename Compare, typename Alloc>
-	friend class MapTree;
+	friend class TreeMap;
 	template<typename N>
 	friend class ConstIterator;
 
@@ -109,7 +109,7 @@ struct ConstIterator : private Node::IterativeStrategy {
 	template<typename Key, template<typename> typename N, typename Compare, typename Alloc>
 	friend class Tree;
 	template<typename Key, typename Value, template<typename> typename N, typename Compare, typename Alloc>
-	friend class MapTree;
+	friend class TreeMap;
 
 	struct CreateBegin { constexpr CreateBegin() = default; };
 	static CreateBegin createBegin;

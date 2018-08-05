@@ -60,7 +60,6 @@ struct RedBlackNode<Key>::RedBlackTreeSentry
 
 	void reset(RedBlackNode<Key> *root) {
 		sentry->left = sentry->right = sentry->p = root;
-		root->p = sentry;
 	}
 
 	RedBlackNode<Key> *sentry;
@@ -90,6 +89,7 @@ struct RedBlackNode<Key>::RbTreeBalanceStrategy : public TreeOp<RedBlackNode<Key
 		if (root == &node_type::null)
 		{
 			root = node;
+			node->p = TreeOperation::sentry.sentry;
 			TreeOperation::resetSentry(root);
 		}
 		else

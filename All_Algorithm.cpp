@@ -406,7 +406,6 @@ std::size_t LCS(InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {
 		std::swap(xe, ye);
 	}
 	std::vector<std::size_t> dp(minlen + 1);
-
 	for (InputIt ibeg = xb; ibeg != xe; ++ibeg)
 	{
 		std::size_t prev = 0;
@@ -414,14 +413,112 @@ std::size_t LCS(InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {
 		{
 			auto len = std::distance(yb, jbeg) + 1;
 			if (comp(*ibeg, *jbeg))
-				dp[len] = prev + 1;
+				prev = std::exchange(dp[len], prev + 1);
 			else if (dp[len] < dp[len - 1])
 				prev = std::exchange(dp[len], dp[len - 1]);
 			else prev = dp[len];
 		}
 	}
-
 	return dp.back();
+}
+
+// 最长公共子序列长度(带备忘自顶向下)
+template<typename InputIt, typename Compare = std::equal_to<typename std::iterator_traits<InputIt>::value_type>>
+std::size_t topDownLCSBase(std::vector<std::vector<int>> &dp, InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {})
+{
+	auto i = std::distance(xb, xe), j = std::distance(yb, ye);
+	if (dp[i][j] != -1)
+		return dp[i][j];
+	if (comp(*--xe, *--ye))
+		return dp[i][j] = topDownLCSBase(dp, xb, xe, yb, ye, comp) + 1;
+	return dp[i][j] = std::max(topDownLCSBase(dp, xb, std::next(xe), yb, ye, comp), topDownLCSBase(dp, xb, xe, yb, std::next(ye), comp));
+}
+template<typename InputIt, typename Compare = std::equal_to<typename std::iterator_traits<InputIt>::value_type>>
+std::size_t topDownLCS(InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {})
+{
+	auto xsize = std::distance(xb, xe) + 1, ysize = std::distance(yb, ye) + 1;
+	std::vector<std::vector<int>> dp(xsize);
+	dp[0].resize(ysize, 0);
+	for (std::size_t i = 1; i < dp.size(); ++i)
+	{
+		dp[i].resize(ysize, -1);
+		dp[i][0] = 0;
+	}
+	return topDownLCSBase(dp, xb, xe, yb, ye, comp);
+}
+
+// 最长单调递增子序列
+template<typename InputIt, typename Compare = std::less<typename std::iterator_traits<InputIt>::value_type>>
+auto LIS(InputIt first, InputIt last, Compare comp = {})
+{
+	using value_type = typename std::iterator_traits<InputIt>::value_type;
+	if (first == last) return std::list<value_type>{};
+	std::vector<std::list<value_type>> dp(std::distance(first, last));
+	dp[0].push_back(*first);
+	std::size_t max = 0;
+	for (InputIt beg = std::next(first); beg != last; ++beg)
+	{
+		if (comp(*beg, dp[max].back()))
+		{
+			auto b = ++dp[max].rbegin();
+			while (b != dp[max].rend() && comp(*beg, *b)) ++b;
+			std::list<value_type> temp(dp[max].begin(), b.base());
+			temp.push_back(*beg);
+			dp[temp.size() - 1] = std::move(temp);
+		}
+		else
+		{
+			dp[max + 1] = dp[max];
+			dp[++max].push_back(*beg);
+		}
+	}
+	return std::move(dp[max]);
+}
+
+// 最长回文子序列
+template<typename T, typename InputIt, typename OutputIt, typename Compare = std::equal_to<typename std::iterator_traits<InputIt>::value_type>>
+OutputIt createLPS(const T &dp, InputIt first, std::size_t i, std::size_t j, OutputIt dest, Compare comp = {}) // 重构
+{
+	if (dp[i][j] == 1)
+	{
+		*dest = *std::next(first, i);
+		return ++dest;
+	}
+	else if (dp[i][j] == dp[i + 1][j])
+		return createLPS(dp, first, i + 1, j, dest, comp);
+	else if (dp[i][j] == dp[i][j - 1])
+		return createLPS(dp, first, i, j - 1, dest, comp);
+	else
+	{
+		InputIt res = createLPS(dp, first, i + 1, j - 1, std::next(dest), comp), n = std::next(first, i);
+		*dest = *n;
+		*res = *std::next(n, j - i);
+		return ++res;
+	}
+}
+template<typename InputIt, typename OutputIt, typename Compare = std::equal_to<typename std::iterator_traits<InputIt>::value_type>>
+OutputIt LPS(InputIt first, InputIt last, OutputIt dest, Compare comp = {})
+{
+	if (first == last) dest;
+	std::vector<std::vector<std::size_t>> dp(std::distance(first, last));
+	std::size_t l = 0;
+	for (InputIt beg = first; beg != last; ++l, ++beg)
+	{
+		dp[l].resize(dp.size());
+		dp[l][l] = 1;
+	}
+	l = 1;
+	for (InputIt end = std::prev(last); l < dp.size(); ++l, --end)
+	{
+		std::size_t i = 0, j = l;
+		for (InputIt ibeg = first, jbeg = std::next(first, l); ibeg != end; ++ibeg, ++jbeg, ++i, ++j)
+		{
+			if (comp(*ibeg, *jbeg))
+				dp[i][j] = dp[i + 1][j - 1] + 2;
+			else dp[i][j] = std::max(dp[i + 1][j], dp[i][j - 1]);
+		}
+	}
+	return createLPS(dp, first, 0, dp.size() - 1, dest, comp);
 }
 
 // 矩阵链乘法问题(打印最优括号化方案)
@@ -1470,20 +1567,32 @@ int main(int argv, char **)
 	// timer
 	test::Timer<> timer;
 
+	auto rand = std::bind(std::uniform_int_distribution<int>(10000, 20000), std::default_random_engine(std::random_device()()));
+	auto rand2 = std::bind(std::uniform_int_distribution<int>(0, 25), std::default_random_engine(std::random_device()()));
+
+	std::string s1 = "AAAAAAAAAAAAAAAAAAA";
+	std::string s2 = "                   ";
+
+	timer.start();
+	std::cout << std::boolalpha << (algo::LPS(s1.begin(), s1.end(), s2.begin()) == s2.end()) << std::endl;
+	std::cout << s2 << std::endl;
+	std::cout << "用时: " << timer.finish().count() << std::endl;
+
+#if 0
 	// random
 	auto rand = std::bind(std::uniform_int_distribution<int>(0, 2000000000), std::default_random_engine(std::random_device()()));
 
 	// init
 	Tree<int, node::RedBlackNode> t;
 	std::vector<int> v, d;
-	test::loadRandomNum(v, rand, 2500000);
+	test::loadRandomNum(v, rand, 5000000);
 	for (int i : v)
 		t.insert(i);
 	std::random_shuffle(v.begin(), v.end());
 
 	// test
 	timer.start();
-	for (int i = 0; i < 2000000; ++i)
+	for (int i = 0; i < 4500000; ++i)
 	{
 		auto it = t.find(v[i]);
 		if (it == t.end())
@@ -1494,7 +1603,7 @@ int main(int argv, char **)
 	std::cout << "size: " << t.size() << std::endl;
 
 	// check
-	v.erase(v.begin(), v.begin() + 2000000);
+	v.erase(v.begin(), v.begin() + 4500000);
 	std::sort(v.begin(), v.end());
 	auto b = t.begin();
 	std::cout << std::boolalpha;
@@ -1504,8 +1613,10 @@ int main(int argv, char **)
 			break;
 		++b;
 	}
-	if (b == t.end()) std::cout << true << std::endl;
-	else std::cout << false << std::endl;
+	std::cout << (t.begin() != t.end()) << std::endl;
 	std::cout << (t.find(888888888) == t.end()) << std::endl;
-	std::cout << *(--t.end()) << ' ' << v.back() << std::endl;
+
+	std::cout << *t.begin() << ' ' << *(--t.end()) << std::endl;
+	std::cout << v.front() << ' ' << v.back() << std::endl;
+#endif
 }

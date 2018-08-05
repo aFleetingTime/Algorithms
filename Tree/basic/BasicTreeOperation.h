@@ -42,12 +42,9 @@ void transplant(Node *&root, Node *x, Node *y)
 		root = y;
 		resetSentry(y);
 	}
-	else
-	{
-		x->setFiliation(y);
-		if (y != &Node::null)
-			y->p = x->p;
-	}
+	else x->setFiliation(y);
+	if (y != &Node::null)
+		y->p = x->p;
 }
 
 void rotate(Node *&root, Node *x, Node* (Node::*a), Node* (Node::*b))

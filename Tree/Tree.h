@@ -15,13 +15,13 @@
  */
 
 
-template<typename Key, template<typename> typename Node, typename Compare = CompareAux<Key, std::less<Key>>, typename Alloc = std::allocator<Node<Key>>>
+template<typename Key, template<typename> typename Node, typename Compare = std::less<Key>, typename Alloc = std::allocator<Node<Key>>>
 class Tree : protected Node<Key>::template BalanceStrategy<toCompareAux<Key, Compare>>
 {
 public:
 	using node_type = Node<Key>;
-	using balance = typename node_type::template BalanceStrategy<Compare>;
 	using compare = toCompareAux<Key, Compare>;
+	using balance = typename node_type::template BalanceStrategy<compare>;
 	using value_type = typename compare::value_type;
 	using key_type = typename compare::key_type;
 	using pointer = value_type*;
@@ -163,7 +163,7 @@ void std::swap(Tree<Key, Node, Compare, Alloc> &lhs, Tree<Key, Node, Compare, Al
 
 template<typename Key, typename Value, template<typename> typename Node,
 	     typename Compare = std::less<Key>, typename Alloc = std::allocator<Node<std::pair<const Key, Value>>>>
-class MapTree : public Tree<std::pair<const Key, Value>, Node, toMapCompareAux<Key, Value, Compare>, Alloc>
+class TreeMap : public Tree<std::pair<const Key, Value>, Node, toMapCompareAux<Key, Value, Compare>, Alloc>
 {
 	using base = Tree<std::pair<const Key, Value>, Node, toMapCompareAux<Key, Value, Compare>, Alloc>;
 
@@ -212,7 +212,7 @@ public:
 	}
 
 	mapped_type& at(const typename base::key_type &key) {
-		return const_cast<mapped_type&>(const_cast<const MapTree&>(*this).at(key));
+		return const_cast<mapped_type&>(const_cast<const TreeMap&>(*this).at(key));
 	}
 	const mapped_type& at(const typename base::key_type &key) const
 	{
