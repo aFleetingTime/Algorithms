@@ -8,9 +8,9 @@
 #include "HuffmanTreeNode.hpp"
 
 template<typename T>
-void toUnsigned(T&);
+inline void toUnsigned(T&);
 template<typename T, typename U>
-void bitCopy(T&, U);
+inline void bitCopy(T&, U);
 
 template<typename CharT, typename BitsT, template<typename...> typename Map>
 class HuffmanTree;
@@ -35,7 +35,8 @@ public:
 	using FreqMapType = std::map<CharType, FreqType>;
 	using Bitset = BitsT;
 	using String = std::basic_string<CharType>;
-	using PriorityQueue = std::priority_queue<std::pair<std::size_t, NodeType*>, std::vector<std::pair<std::size_t, NodeType*>>, NodeType::BeforeType>;
+	using PriorityQueue = std::priority_queue<std::pair<std::size_t, NodeType*>,
+			std::vector<std::pair<std::size_t, NodeType*>>, NodeType::BeforeType>;
 
 	constexpr static CharType fileSeparator = '-';
 	constexpr static BitsetSizeType bitsetSize = sizeof(BitsT) * 8;
@@ -283,7 +284,6 @@ auto HuffmanTree<CharT, BitsT, Map>::fromBitset(Bitset bs, BitsetSizeType size) 
 	return ResultType{static_cast<const LeafNodeType*>(n)->value, count};
 }
 
-#if 1
 template<typename CharT, typename BitsT, template<typename...> typename Map>
 std::basic_ostream<CharT>& operator<<(std::basic_ostream<CharT> &output, const HuffmanTree<CharT, BitsT, Map> &tree)
 {
@@ -323,7 +323,7 @@ std::basic_istream<CharT>& operator>>(std::basic_istream<CharT> &input, HuffmanT
 	String leavesInfo(leavesInfoSize, '\0');
 	input.read(leavesInfo.data(), leavesInfoSize);
 	if (input.gcount() != leavesInfoSize)
-		throw FileFormatError("结点信息缺失");
+		throw FileDataLost("压缩信息缺失", leavesInfoSize, input.gcount());
 
 	typename Tree::MapType leaves;
 	NodeType *root = new NodeType;
@@ -364,22 +364,31 @@ std::basic_istream<CharT>& operator>>(std::basic_istream<CharT> &input, HuffmanT
 		throw FileFormatError("压缩文件内容格式错误");
 	return input;
 }
-#endif
 
 template<typename T>
-void toUnsigned(T &b) {
+inline void toUnsigned(T &b) {
 	if (b < 0)
 		b -= std::pow(2, sizeof(T) - 1);
 }
 
 template<typename T, typename U>
-void bitCopy(T &a, U b) {
+inline void bitCopy(T &a, U b) {
+	constexpr std::size_t bit = sizeof(U) * 8;
+	if (b < 0)
+	{
+		(a <<= bit) |= std::make_unsigned_t<U>(b) - std::make_unsigned_t<U>(std::pow(2, bit - 1));
+		a |= T(0x1) << bit - 1;
+	}
+	else (a <<= bit) |= std::make_unsigned_t<U>(b);
+
+	/*
 	if (b < 0)
 	{
 		(a <<= sizeof(U) * 8) |= std::make_unsigned_t<U>(b) - std::make_unsigned_t<U>(std::pow(2, sizeof(U) * 8 - 1));
 		a |= T(0x1) << sizeof(U) * 8 - 1;
 	}
 	else (a <<= sizeof(U) * 8) |= std::make_unsigned_t<U>(b);
+	*/
 
 	//std::make_unsigned_t<U> c = b;
 	//if (b < 0)
@@ -390,61 +399,3 @@ void bitCopy(T &a, U b) {
 	//}
 	//else (a <<= sizeof(U) * 8) |= c;
 }
-
-#if 0
-template<typename CharT, typename BitsT, template<typename...> typename Map>
-std::basic_ostream<CharT>& operator<<(std::basic_ostream<CharT> &output, const HuffmanTree<CharT, BitsT, Map> &tree)
-{
-	using Tree = HuffmanTree<CharT, BitsT, Map>;
-	using BitsetSizeType = typename Tree::BitsetSizeType;
-	constexpr BitsetSizeType whileCount = Tree::bitsetSize / Tree::charBitSize;
-
-	output << tree.leafCount() << Tree::fileSeparator;
-	for (const auto &leaf : tree.leaves)
-	{
-		std::cout << tree.toBitset(leaf.first).first << std::endl;
-		output.put(leaf.first) << leaf.second->freq << Tree::fileSeparator;
-	}
-	return output;
-}
-
-template<typename CharT, typename BitsT, template<typename...> typename Map>
-std::basic_istream<CharT>& operator>>(std::basic_istream<CharT> &input, HuffmanTree<CharT, BitsT, Map> &tree)
-{
-	using Tree = HuffmanTree<CharT, BitsT, Map>;
-	using Bitset = typename Tree::Bitset;
-	using String = typename Tree::String;
-	using NodeType = typename Tree::NodeType;
-	using FreqType = typename Tree::FreqType;
-	using LeafNodeType = typename Tree::LeafNodeType;
-	using BitsetSizeType = typename Tree::BitsetSizeType;
-	constexpr BitsetSizeType whileCount = Tree::bitsetSize / Tree::charBitSize;
-
-	FreqType leavesCount;
-	input >> leavesCount;
-	if (input.get() != Tree::fileSeparator)
-		throw FileFormatError("压缩文件内容格式错误");
-
-	typename Tree::FreqMapType leaves;
-	while (leavesCount)
-	{
-		auto value = input.get();
-		FreqType freq;
-		input >> freq;
-		leaves.emplace(value, freq);
-		--leavesCount;
-		if (input.get() != Tree::fileSeparator)
-			throw FileFormatError("压缩文件内容格式错误");
-	}
-	if (leavesCount > 0)
-		throw FileFormatError("压缩文件内容不完整");
-	tree = std::move(Tree(leaves));
-	for (auto [ch, leaf] : tree.leaves)
-	{
-		if (ch != leaf->value) throw;
-		std::cout << tree.toBitset(leaf->value).first << std::endl;
-		std::cout << int(leaf->value) << ' ' << leaf->freq << std::endl;
-	}
-	return input;
-}
-#endif

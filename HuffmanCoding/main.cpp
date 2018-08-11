@@ -51,6 +51,11 @@ int main(int argv, char *argc[])
 		try {
 			HuffmanCodingTree ht(input);
 			unCompress(ht, input, output);
+		} catch (UnCompressFailed &e) {
+			cerrExit(std::string(e.what()) + "\n剩余: " + std::to_string(e.remSize) + "(bytes)未能解压");
+		} catch (FileDataLost &e) {
+			cerrExit(std::string(e.what()) + "\n期望大小: " + std::to_string(e.expect) + "(bytes)   "
+										   + "实际大小: " + std::to_string(e.size) + "(bytes)");
 		} catch (std::exception &e) {
 			cerrExit(e.what());
 		} catch (...) {

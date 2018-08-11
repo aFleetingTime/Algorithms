@@ -19,12 +19,12 @@ bool interaction(std::string_view info, char a, char b);
 void preprocessingPath(char flag, std::filesystem::path &src, std::filesystem::path &dest);
 
 template<typename C>
-void checkStream(const std::basic_ios<C> &stream) {
+inline void checkStream(const std::basic_ios<C> &stream) {
 	if (!stream) cerrExit("流异常");
 }
 
 template<typename Map, typename M>
-auto convMap(const M &m) {
+inline auto convMap(const M &m) {
 	return Map(m.cbegin(), m.cend());
 }
 
