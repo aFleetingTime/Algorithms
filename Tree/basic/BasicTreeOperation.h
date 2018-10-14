@@ -65,18 +65,44 @@ void rightRotate(Node *&root, Node *x) {
 }
 
 template<typename Compare>
-auto findInsertionPoint(const Node *root, const Node *key, const Compare &comp) const	// 假定node不为null
+auto findInsertionPoint(const Node *root, const typename Compare::value_type &key, const Compare &comp) const	// 假定root不为null
 {
 	Node* Node::*dire;
 	while (true)
 	{
-		if (comp(key->value(), root->value()))
+		if (comp(key, root->value()))
 			dire = &Node::left;
 		else dire = &Node::right;
 		if (root->*dire == &Node::null) break;
 		root = root->*dire;
 	}
-	return std::pair{ root, dire };
+	return std::pair{root, dire};
+}
+
+template<typename Compare>
+std::pair<const Node*, bool> findInsertionPointOrNode(const Node *root, const typename Compare::key_type &key, const Compare &comp) const	// 假定root不为null
+{
+	Node* Node::*dire;
+	bool exist;
+	while (true)
+	{
+		if (comp(key, root->value()))
+			dire = &Node::left;
+		else if (comp(root->value(), key))
+			dire = &Node::right;
+		else
+		{
+			exist = true;
+			break;
+		}
+		if (root->*dire == &Node::null)
+		{
+			exist = false;
+			break;
+		}
+		root = root->*dire;
+	}
+	return {root, exist};
 }
 
 template<typename Compare>

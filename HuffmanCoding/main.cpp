@@ -3,7 +3,6 @@
 #include <unordered_map>
 #include "BasicLogic.h"
 #include "HuffmanCompress.hpp"
-#include "../Algorithms.cpp"
 
 namespace fs = std::filesystem;
 
@@ -27,8 +26,6 @@ int main(int argv, char *argc[])
 	std::basic_ofstream<CharType> output(dest, std::ios::binary);
 	checkStream(output);
 
-	test::Timer t;
-	t.start();
 	if (flag == Compress)
 	{
 		HuffmanCodingTree ht(convMap<Map>(countFreq<UMap>(input)));
@@ -42,7 +39,6 @@ int main(int argv, char *argc[])
 			cerrExit("未知错误");
 		}
 		compress(ht, input, output);
-		std::cout << t.finish().count() << std::endl;
 		std::cout << "压缩前: " << ht.freqSum() << "(bytes)\n"
 				  << "压缩后: " << output.tellp() << "(bytes)\n";
 	}

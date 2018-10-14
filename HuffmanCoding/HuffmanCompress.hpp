@@ -23,7 +23,7 @@ void compress(const HuffmanTree<CharT, BitsT, Map> &ht, std::basic_istream<CharT
 	{
 		bitBuf <<= Tree::bitsetSize - count;
 		for (BitsetSizeType i = (count - 1) / Tree::charBitSize + 1; i; --i)
-			output.put(bitBuf >> Tree::bitsetSize - i * Tree::charBitSize);
+			output.put(bitBuf >> (Tree::bitsetSize - i * Tree::charBitSize));
 	}
 }
 

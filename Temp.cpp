@@ -24,7 +24,7 @@
 #include <iostream>
 
 template<typename Iter>
-using itvalue_type = typename std::iterator_traits<Iter>::value_type;
+using iter_value_type = typename std::iterator_traits<Iter>::value_type;
 
 namespace test {
 // 编译阶段查看类型
@@ -52,9 +52,9 @@ void print(const T& first, const Argv&... argv)
 
 // 以n行m列打印线性数组
 template<typename T>
-void printmatrix(const std::valarray<T> &va, size_t n, size_t m)
+void printmatrix(const std::valarray<T> &va, std::size_t n, std::size_t m)
 {
-	for (size_t i = 0; i < n; ++i)
+	for (std::size_t i = 0; i < n; ++i)
 		test::print(std::valarray<T>(va[std::slice(i * m, m, 1)]));
 	std::cout << '\n';
 }
@@ -69,7 +69,7 @@ struct GetMemFuncArgs<R(C::*)(A)> {
 // 产生随机数
 template<typename Container, typename RandomEngine,
 		 typename Return = void, typename Value = typename Container::const_reference>
-void loadRandomNum(Container &cont, RandomEngine rand, size_t count, Return(Container::*op)(const Value&) = &Container::push_back) {
+void loadRandomNum(Container &cont, RandomEngine rand, std::size_t count, Return(Container::*op)(const Value&) = &Container::push_back) {
 	while (count--) (cont.*op)(rand());
 }
 
@@ -90,9 +90,9 @@ public:
 namespace algoBase {
 template<typename value_type = unsigned int>
 struct ValueIndex {
-	value_type value; size_t index;
+	value_type value; std::size_t index;
 	ValueIndex() : value{}, index{} { }
-	ValueIndex(value_type v, size_t i = 0) : value(v), index(i) { }
+	ValueIndex(value_type v, std::size_t i = 0) : value(v), index(i) { }
 	operator value_type() { return value; }
 	ValueIndex& operator++() { ++value; return *this; }
 	ValueIndex& operator--() { --value; return *this; }
@@ -108,7 +108,7 @@ bool operator<(const ValueIndex<value_type> &lhs, value_type rhs) { return lhs.v
 template<typename value_type>
 bool operator<(value_type lhs, const ValueIndex<value_type> &rhs) { return lhs < rhs.value; }
 
-inline unsigned int getBit(std::uintmax_t num, size_t i) {
+inline unsigned int getBit(std::uintmax_t num, std::size_t i) {
 	if (i == 0)
 		return num % 10;
 	return num % static_cast<std::uintmax_t>(std::pow(10, i + 1)) / static_cast<std::uintmax_t>(std::pow(10, i));
@@ -119,9 +119,9 @@ inline constexpr unsigned int numDigit(std::uintmax_t num) {
 }
 
 template<typename InputIt>
-std::tuple<InputIt, InputIt, itvalue_type<InputIt>> maxSubArray(InputIt low, InputIt mid, InputIt high)
+std::tuple<InputIt, InputIt, typename std::iterator_traits<InputIt>::value_type> maxSubArray(InputIt low, InputIt mid, InputIt high)
 {
-	using value_type = itvalue_type<InputIt>;
+	using value_type = typename std::iterator_traits<InputIt>::value_type;
 
 	InputIt leftMax(std::prev(mid));
 	value_type leftSum = std::numeric_limits<value_type>::lowest(), sum{};
@@ -167,7 +167,7 @@ auto activitySelector(InputIt s_first, InputIt s_last, InputIt f_first, InputIt 
 {
 	std::vector<std::pair<InputIt, InputIt>> res;
 	if (s_first == s_last) return res;
-	size_t count = 0;
+	std::size_t count = 0;
 	res.push_back({ s_first, f_first });
 	InputIt max = f_first;
 	while (++f_first != f_last)
@@ -182,11 +182,11 @@ auto activitySelector(InputIt s_first, InputIt s_last, InputIt f_first, InputIt 
 }
 
 // 找零问题(贪心方法) - O(n lg n)
-template<typename InputIt, typename T = itvalue_type<InputIt>>
+template<typename InputIt, typename T = typename std::iterator_traits<InputIt>::value_type>
 auto change(T val, InputIt first, InputIt last)
 {
 	static_assert(std::is_integral_v<T> || std::is_floating_point_v<T>);
-	std::vector<itvalue_type<InputIt>> deno(first, last), dest;
+	std::vector<typename std::iterator_traits<InputIt>::value_type> deno(first, last), dest;
 	std::sort(deno.begin(), deno.end(), std::greater<typename decltype(deno)::value_type>());
 	for (auto beg = deno.cbegin(); beg != deno.cend(); ++beg)
 		if (*beg <= val)
@@ -200,17 +200,17 @@ auto change(T val, InputIt first, InputIt last)
 
 // 找零问题(动态规划) - O(nk)
 template<typename InputIt>
-std::vector<itvalue_type<InputIt>> change(InputIt first, InputIt last, itvalue_type<InputIt> n)
+std::vector<typename std::iterator_traits<InputIt>::value_type> change(InputIt first, InputIt last, typename std::iterator_traits<InputIt>::value_type n)
 {
-	using value_type = itvalue_type<InputIt>;
+	using value_type = typename std::iterator_traits<InputIt>::value_type;
 	auto k = std::distance(first, last);
 	if (k == 0 || n == 0)
 		return {};
 
-	std::vector<size_t> dp(n + 1), r(n + 1, 1);
+	std::vector<std::size_t> dp(n + 1), r(n + 1, 1);
 	std::iota(dp.begin(), dp.end(), 0);
-	for (size_t i = 1; i <= k; ++i, ++first)
-		for (size_t j = *first; j <= n; ++j)
+	for (std::size_t i = 1; i <= k; ++i, ++first)
+		for (std::size_t j = *first; j <= n; ++j)
 			if (dp[j - *first] + 1 < dp[j])
 			{
 				dp[j] = dp[j - *first] + 1;
@@ -225,12 +225,13 @@ std::vector<itvalue_type<InputIt>> change(InputIt first, InputIt last, itvalue_t
 	return res;
 }
 
+
 // 赫夫曼编码 - O(n lg n)
 template<typename InputIt>
 auto huffman(InputIt first, InputIt last)
 {
-	using value_type = typename itvalue_type<InputIt>::first_type;
-	using freq_type = typename itvalue_type<InputIt>::second_type;
+	using value_type = typename std::iterator_traits<InputIt>::value_type::first_type;
+	using freq_type = typename std::iterator_traits<InputIt>::value_type::second_type;
 	static_assert(std::is_integral_v<freq_type>);
 	struct Node {
 		Node &left, &right;
@@ -271,10 +272,10 @@ auto huffman(InputIt first, InputIt last)
 
 // 分数背包问题 - O(n)
 template <typename InputIt1, typename InputIt2>
-size_t fractionalKnapsack(InputIt1 pb, InputIt1 pe, InputIt2 wb, InputIt2 we, size_t n)
+std::size_t fractionalKnapsack(InputIt1 pb, InputIt1 pe, InputIt2 wb, InputIt2 we, std::size_t n)
 {
-	using type1 = itvalue_type<InputIt1>;
-	using type2 = itvalue_type<InputIt2>;
+	using type1 = typename std::iterator_traits<InputIt1>::value_type;
+	using type2 = typename std::iterator_traits<InputIt2>::value_type;
 	static_assert(traits::can_divide<type1, type2>::value);
 	auto priceNum = std::distance(pb, pe);
 	if (priceNum != std::distance(wb, we)) throw std::invalid_argument("");
@@ -282,7 +283,7 @@ size_t fractionalKnapsack(InputIt1 pb, InputIt1 pe, InputIt2 wb, InputIt2 we, si
 	for (auto pbeg = pb, wbeg = wb; pbeg != pe; ++pbeg, ++wbeg)
 		prices.emplace_back(*pbeg / *wbeg, *wbeg);
 	std::sort(prices.begin(), prices.end(), [](auto &lhs, auto &rhs) { return lhs.first > rhs.first; });
-	size_t result = 0;
+	std::size_t result = 0;
 	for (auto &val : prices)
 		if (n <= val.second)
 		{
@@ -299,13 +300,13 @@ size_t fractionalKnapsack(InputIt1 pb, InputIt1 pe, InputIt2 wb, InputIt2 we, si
 
 // 01背包问题
 template<typename InputIt>
-auto zeroOneKnapsack(InputIt price, InputIt pend, InputIt weight, const itvalue_type<InputIt> &capacity)
+auto zeroOneKnapsack(InputIt price, InputIt pend, InputIt weight, const typename std::iterator_traits<InputIt>::value_type &capacity)
 {
-	std::vector<std::vector<size_t>> dp(std::distance(price, pend) + 1), sz(dp.size());
+	std::vector<std::vector<std::size_t>> dp(std::distance(price, pend) + 1), sz(dp.size());
 	for (auto &v : dp)
 		v.resize(capacity + 1);
-	for (size_t i = 0; i < dp.size() - 1; ++i)
-		for (size_t j = 1; j <= capacity; ++j)
+	for (std::size_t i = 0; i < dp.size() - 1; ++i)
+		for (std::size_t j = 1; j <= capacity; ++j)
 			if (j >= weight[i])
 				dp[i + 1][j] = std::max(dp[i][j - weight[i]] + price[i], dp[i][j]);
 			else dp[i + 1][j] = dp[i][j];
@@ -317,26 +318,26 @@ template<typename InputIt>
 auto optimalBSTBase(InputIt pb, InputIt pe, InputIt qb, InputIt qe)
 {
 	struct MyHash {
-		size_t operator()(const std::pair<size_t, size_t> &val) const noexcept {
-			return std::hash<size_t>()(val.first) ^ std::hash<size_t>()(val.second);
+		std::size_t operator()(const std::pair<std::size_t, std::size_t> &val) const noexcept {
+			return std::hash<std::size_t>()(val.first) ^ std::hash<std::size_t>()(val.second);
 		}
 	};
 	auto psize = std::distance(pb, pe), qsize = std::distance(qb, qe);
 	if (psize != qsize - 1) throw std::invalid_argument("");
-	std::unordered_map<std::pair<size_t, size_t>, double, MyHash> e, w;
-	std::unordered_map<std::pair<size_t, size_t>, size_t, MyHash> root;
+	std::unordered_map<std::pair<std::size_t, std::size_t>, double, MyHash> e, w;
+	std::unordered_map<std::pair<std::size_t, std::size_t>, std::size_t, MyHash> root;
 	for (int i = 0; i <= psize; ++i)
 		root[{i + 1, i}] = i + 1;
-	for (size_t i = 1; i <= qsize; ++i)
+	for (std::size_t i = 1; i <= qsize; ++i)
 		e[{i, i - 1}] = w[{i, i - 1}] = qb[i - 1];
-	for (size_t l = 0; l < psize; ++l)
+	for (std::size_t l = 0; l < psize; ++l)
 	{
-		for (size_t i = 1; i <= psize - l; ++i)
+		for (std::size_t i = 1; i <= psize - l; ++i)
 		{
-			size_t j = i + l;
+			std::size_t j = i + l;
 			e[{i, j}] = std::numeric_limits<double>::max();
 			w[{i, j}] = w[{i, j - 1}] + *std::next(pb, j - 1) + *std::next(qb, j);
-			for (size_t r = root[{i, j - 1}], len = root[{i + 1, j}]; r <= len; ++r)
+			for (std::size_t r = root[{i, j - 1}], len = root[{i + 1, j}]; r <= len; ++r)
 			{
 				double temp = e[{i, r - 1}] + e[{r + 1, j}] + w[{i, j}];
 				if (temp < e[{i, j}])
@@ -350,7 +351,7 @@ auto optimalBSTBase(InputIt pb, InputIt pe, InputIt qb, InputIt qe)
 	return root;
 }
 template<typename T>
-void printOptimalBST(T &root, size_t low, size_t high, short flag)
+void printOptimalBST(T &root, std::size_t low, std::size_t high, short flag)
 {
 	if (low <= high)
 		std::cout << "(k" << root[{low, high}] << ')';
@@ -374,12 +375,12 @@ void optimalBST(InputIt pb, InputIt pe, InputIt qb, InputIt qe)
 }
 
 // 最长公共子序列 - O(mn)
-template<typename InputIt, typename Compare = std::equal_to<itvalue_type<InputIt>>>
-std::vector<std::vector<size_t>> LCSlengthSolution(InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {})
+template<typename InputIt, typename Compare = std::equal_to<typename std::iterator_traits<InputIt>::value_type>>
+std::vector<std::vector<std::size_t>> LCSlengthSolution(InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {})
 {
 	auto xsize = std::distance(xb, xe), ysize = std::distance(yb, ye);
 
-	std::vector<std::vector<size_t>> lengths(xsize + 1);
+	std::vector<std::vector<std::size_t>> lengths(xsize + 1);
 	for (auto &c : lengths)
 		c.resize(ysize + 1);
 
@@ -399,7 +400,7 @@ std::vector<std::vector<size_t>> LCSlengthSolution(InputIt xb, InputIt xe, Input
 	return lengths;
 }
 template<typename InputIt, typename OutputIt, typename Compare>
-void createLCS(const std::vector<std::vector<size_t>> &s, InputIt xb, InputIt xe, InputIt yb, InputIt ye, OutputIt dest, const Compare &comp)
+void createLCS(const std::vector<std::vector<std::size_t>> &s, InputIt xb, InputIt xe, InputIt yb, InputIt ye, OutputIt dest, const Compare &comp)
 {
 	auto xlen = std::distance(xb, xe) + 1, ylen = std::distance(yb, ye) + 1;
 	if (xlen == 0 || ylen == 0)
@@ -413,19 +414,18 @@ void createLCS(const std::vector<std::vector<size_t>> &s, InputIt xb, InputIt xe
 		createLCS(s, xb, xe, yb, std::prev(ye), dest, comp);
 	else createLCS(s, xb, std::prev(xe), yb, ye, dest, comp);
 }
-template<typename InputIt, typename Compare = std::equal_to<itvalue_type<InputIt>>>
+template<typename InputIt, typename Compare = std::equal_to<typename std::iterator_traits<InputIt>::value_type>>
 auto LCSlength(InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {})
 {
-	using value_type = itvalue_type<InputIt>;
+	using value_type = typename std::iterator_traits<InputIt>::value_type;
 	auto lengths = LCSlengthSolution(xb, xe, yb, ye, comp);
 	std::vector<value_type> res(lengths.back().back());
 	createLCS(lengths, xb, std::prev(xe), yb, std::prev(ye), --res.end(), comp);
 	return res;
 }
-
 // 最长公共子序列长度
-template<typename InputIt, typename Compare = std::equal_to<itvalue_type<InputIt>>>
-size_t LCS(InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {})
+template<typename InputIt, typename Compare = std::equal_to<typename std::iterator_traits<InputIt>::value_type>>
+std::size_t LCS(InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {})
 {
 	auto minlen = std::distance(yb, ye), maxlen = std::distance(xb, xe);
 	if (!minlen || !maxlen)
@@ -436,10 +436,10 @@ size_t LCS(InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {})
 		std::swap(xb, yb);
 		std::swap(xe, ye);
 	}
-	std::vector<size_t> dp(minlen + 1);
+	std::vector<std::size_t> dp(minlen + 1);
 	for (InputIt ibeg = xb; ibeg != xe; ++ibeg)
 	{
-		size_t prev = 0;
+		std::size_t prev = 0;
 		for (InputIt jbeg = yb; jbeg != ye; ++jbeg)
 		{
 			auto len = std::distance(yb, jbeg) + 1;
@@ -454,8 +454,8 @@ size_t LCS(InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {})
 }
 
 // 最长公共子序列长度(带备忘自顶向下)
-template<typename InputIt, typename Compare = std::equal_to<itvalue_type<InputIt>>>
-size_t topDownLCSBase(std::vector<std::vector<int>> &dp, InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {})
+template<typename InputIt, typename Compare = std::equal_to<typename std::iterator_traits<InputIt>::value_type>>
+std::size_t topDownLCSBase(std::vector<std::vector<int>> &dp, InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {})
 {
 	auto i = std::distance(xb, xe), j = std::distance(yb, ye);
 	if (dp[i][j] != -1)
@@ -464,13 +464,13 @@ size_t topDownLCSBase(std::vector<std::vector<int>> &dp, InputIt xb, InputIt xe,
 		return dp[i][j] = topDownLCSBase(dp, xb, xe, yb, ye, comp) + 1;
 	return dp[i][j] = std::max(topDownLCSBase(dp, xb, std::next(xe), yb, ye, comp), topDownLCSBase(dp, xb, xe, yb, std::next(ye), comp));
 }
-template<typename InputIt, typename Compare = std::equal_to<itvalue_type<InputIt>>>
-size_t topDownLCS(InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {})
+template<typename InputIt, typename Compare = std::equal_to<typename std::iterator_traits<InputIt>::value_type>>
+std::size_t topDownLCS(InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp = {})
 {
 	auto xsize = std::distance(xb, xe) + 1, ysize = std::distance(yb, ye) + 1;
 	std::vector<std::vector<int>> dp(xsize);
 	dp[0].resize(ysize, 0);
-	for (size_t i = 1; i < dp.size(); ++i)
+	for (std::size_t i = 1; i < dp.size(); ++i)
 	{
 		dp[i].resize(ysize, -1);
 		dp[i][0] = 0;
@@ -479,14 +479,14 @@ size_t topDownLCS(InputIt xb, InputIt xe, InputIt yb, InputIt ye, Compare comp =
 }
 
 // 最长单调递增子序列
-template<typename InputIt, typename Compare = std::less<itvalue_type<InputIt>>>
+template<typename InputIt, typename Compare = std::less<typename std::iterator_traits<InputIt>::value_type>>
 auto LIS(InputIt first, InputIt last, Compare comp = {})
 {
-	using value_type = itvalue_type<InputIt>;
+	using value_type = typename std::iterator_traits<InputIt>::value_type;
 	if (first == last) return std::list<value_type>{};
 	std::vector<std::list<value_type>> dp(std::distance(first, last));
 	dp[0].push_back(*first);
-	size_t max = 0;
+	std::size_t max = 0;
 	for (InputIt beg = std::next(first); beg != last; ++beg)
 	{
 		if (comp(*beg, dp[max].back()))
@@ -507,8 +507,8 @@ auto LIS(InputIt first, InputIt last, Compare comp = {})
 }
 
 // 最长回文子序列
-template<typename T, typename InputIt, typename OutputIt, typename Compare = std::equal_to<itvalue_type<InputIt>>>
-OutputIt createLPS(const T &dp, InputIt first, size_t i, size_t j, OutputIt dest, Compare comp = {}) // 重构
+template<typename T, typename InputIt, typename OutputIt, typename Compare = std::equal_to<typename std::iterator_traits<InputIt>::value_type>>
+OutputIt createLPS(const T &dp, InputIt first, std::size_t i, std::size_t j, OutputIt dest, Compare comp = {}) // 重构
 {
 	if (dp[i][j] == 1)
 	{
@@ -527,12 +527,12 @@ OutputIt createLPS(const T &dp, InputIt first, size_t i, size_t j, OutputIt dest
 		return ++res;
 	}
 }
-template<typename InputIt, typename OutputIt, typename Compare = std::equal_to<itvalue_type<InputIt>>>
+template<typename InputIt, typename OutputIt, typename Compare = std::equal_to<typename std::iterator_traits<InputIt>::value_type>>
 OutputIt LPS(InputIt first, InputIt last, OutputIt dest, Compare comp = {})
 {
 	if (first == last) dest;
-	std::vector<std::vector<size_t>> dp(std::distance(first, last));
-	size_t l = 0;
+	std::vector<std::vector<std::size_t>> dp(std::distance(first, last));
+	std::size_t l = 0;
 	for (InputIt beg = first; beg != last; ++l, ++beg)
 	{
 		dp[l].resize(dp.size());
@@ -541,7 +541,7 @@ OutputIt LPS(InputIt first, InputIt last, OutputIt dest, Compare comp = {})
 	l = 1;
 	for (InputIt end = std::prev(last); l < dp.size(); ++l, --end)
 	{
-		size_t i = 0, j = l;
+		std::size_t i = 0, j = l;
 		for (InputIt ibeg = first, jbeg = std::next(first, l); ibeg != end; ++ibeg, ++jbeg, ++i, ++j)
 		{
 			if (comp(*ibeg, *jbeg))
@@ -554,7 +554,7 @@ OutputIt LPS(InputIt first, InputIt last, OutputIt dest, Compare comp = {})
 
 // 矩阵链乘法问题(打印最优括号化方案)
 template<typename Map>
-std::ostream& printMatrixChainMultiplySolution(std::ostream &os, Map &s, size_t i, size_t j)
+std::ostream& printMatrixChainMultiplySolution(std::ostream &os, Map &s, std::size_t i, std::size_t j)
 {
 	if (i + 1 >= j)
 		os << ("A" + std::to_string(i));
@@ -568,7 +568,7 @@ std::ostream& printMatrixChainMultiplySolution(std::ostream &os, Map &s, size_t 
 	return os;
 }
 template<typename Map>
-std::ostream& printMatrixChainMultiply(std::ostream &os, Map &s, size_t size) {
+std::ostream& printMatrixChainMultiply(std::ostream &os, Map &s, std::size_t size) {
 	return printMatrixMultiplySolution(os, s, 0, size);
 }
 // 矩阵链乘法问题(自底向上)
@@ -576,19 +576,19 @@ template<typename InputIt>
 auto matrixChainMultiply(InputIt chain, InputIt last)
 {
 	struct MyHash {
-		size_t operator()(const std::pair<size_t, size_t> &val) const noexcept {
-			return std::hash<size_t>()(val.first) ^ std::hash<size_t>()(val.second);
+		std::size_t operator()(const std::pair<std::size_t, std::size_t> &val) const noexcept {
+			return std::hash<std::size_t>()(val.first) ^ std::hash<std::size_t>()(val.second);
 		}
 	};
 	auto size = std::distance(chain, last) - 1;
-	std::unordered_map<std::pair<size_t, size_t>, size_t, MyHash> results, indexes;
-	for (size_t i = 1; i < size; ++i)
+	std::unordered_map<std::pair<std::size_t, std::size_t>, std::size_t, MyHash> results, indexes;
+	for (std::size_t i = 1; i < size; ++i)
 	{
-		for (size_t j = 0; j < size - i; ++j)
+		for (std::size_t j = 0; j < size - i; ++j)
 		{
-			size_t l = j + i;
-			results[{j, l}] = std::numeric_limits<size_t>::max();
-			for (size_t k = j; k < l; ++k)
+			std::size_t l = j + i;
+			results[{j, l}] = std::numeric_limits<std::size_t>::max();
+			for (std::size_t k = j; k < l; ++k)
 			{
 				auto current = results[{j, k}] + results[{k + 1, l}] + chain[j] * chain[k + 1] * chain[l + 1];
 				if (current < results[{j, l}])
@@ -604,16 +604,16 @@ auto matrixChainMultiply(InputIt chain, InputIt last)
 
 // 矩阵链乘法问题(带备忘的自顶向下)
 template<typename InputIt, typename Map>
-size_t recMatrixChainMultiplySolution(Map &results, Map &indexes, InputIt p, size_t i, size_t j)
+std::size_t recMatrixChainMultiplySolution(Map &results, Map &indexes, InputIt p, std::size_t i, std::size_t j)
 {
 	if (i + 1 >= j)
 		return results[{i, i}] = 0;
 	if (auto temp = results.find({i, j - 1}); temp != results.end())
 		return temp->second;
-	results[{i, j - 1}] = std::numeric_limits<size_t>::max();
-	for (size_t k = i + 1; k < j; ++k)
+	results[{i, j - 1}] = std::numeric_limits<std::size_t>::max();
+	for (std::size_t k = i + 1; k < j; ++k)
 	{
-		size_t currentValue = recMatrixChainMultiplySolution(results, indexes, p, i, k) + recMatrixChainMultiplySolution(results, indexes, p, k, j) + p[i] * p[k] * p[j];
+		std::size_t currentValue = recMatrixChainMultiplySolution(results, indexes, p, i, k) + recMatrixChainMultiplySolution(results, indexes, p, k, j) + p[i] * p[k] * p[j];
 		if (currentValue < results[{i, j - 1}])
 		{
 			results[{i, j - 1}] = currentValue;
@@ -626,27 +626,27 @@ template<typename InputIt>
 auto recMatrixChainMultiply(InputIt beg, InputIt end)
 {
 	struct MyHash {
-		size_t operator()(const std::pair<size_t, size_t> &val) const noexcept {
-			return std::hash<size_t>()(val.first) ^ std::hash<size_t>()(val.second);
+		std::size_t operator()(const std::pair<std::size_t, std::size_t> &val) const noexcept {
+			return std::hash<std::size_t>()(val.first) ^ std::hash<std::size_t>()(val.second);
 		}
 	};
-	std::unordered_map<std::pair<size_t, size_t>, size_t, MyHash> results, indexes;
-	size_t sz = std::distance(beg, end) - 1;
+	std::unordered_map<std::pair<std::size_t, std::size_t>, std::size_t, MyHash> results, indexes;
+	std::size_t sz = std::distance(beg, end) - 1;
 	recMatrixChainMultiplySolution(results, indexes, beg, 0, sz);
 	return std::pair(results, indexes);
 }
 
 // 钢条切割问题 - O(n^2)
 template<typename InputIt>
-std::vector<itvalue_type<InputIt>> baseCutRod(InputIt prices, std::intmax_t n, std::intmax_t c)
+std::vector<typename std::iterator_traits<InputIt>::value_type> baseCutRod(InputIt prices, std::intmax_t n, std::intmax_t c)
 {
-	using integer = itvalue_type<InputIt>;
+	using integer = typename std::iterator_traits<InputIt>::value_type;
 	std::vector<integer> results(n), lengths(n), counts(n);
-	for (size_t i = 0; i < n; ++i)
+	for (std::size_t i = 0; i < n; ++i)
 	{
 		results[i] = *std::next(prices, i);
 		lengths[i] = i + 1;
-		for (size_t j = 1; j <= i; ++j)
+		for (std::size_t j = 1; j <= i; ++j)
 			if (integer price = *std::next(prices, j - 1) + results[i - j] - c - counts[i - j] * c; results[i] < price)
 			{
 				lengths[i] = j;
@@ -659,7 +659,7 @@ std::vector<itvalue_type<InputIt>> baseCutRod(InputIt prices, std::intmax_t n, s
 template<typename InputIt, typename OutputIt>
 void cutRod(InputIt prices, std::intmax_t n, std::intmax_t c, OutputIt dest)
 {
-	static_assert(std::is_integral_v<itvalue_type<InputIt>>);
+	static_assert(std::is_integral_v<typename std::iterator_traits<InputIt>::value_type>);
 	auto result = baseCutRod(prices, n, c);
 	while (n > 0)
 	{
@@ -670,10 +670,10 @@ void cutRod(InputIt prices, std::intmax_t n, std::intmax_t c, OutputIt dest)
 
 // 约瑟夫问题(链表实现) - O(n)
 template<typename LinkedList>
-void josephus(LinkedList &list, LinkedList &dest, size_t m)
+void josephus(LinkedList &list, LinkedList &dest, std::size_t m)
 {
 	if (m == 0) throw std::logic_error("logic error");
-	size_t current = (m - 1) % list.size();
+	std::size_t current = (m - 1) % list.size();
 	while (true)
 	{
 		dest.splice(dest.end(), list, std::next(list.begin(), current));
@@ -683,7 +683,7 @@ void josephus(LinkedList &list, LinkedList &dest, size_t m)
 }
 
 // 搜索第二小元素
-template<typename InputIt, typename Compare = std::less<itvalue_type<InputIt>>>
+template<typename InputIt, typename Compare = std::less<typename std::iterator_traits<InputIt>::value_type>>
 InputIt findSecond(InputIt first, InputIt last, Compare comp = {})
 {
 	if (std::distance(first, last) <= 1)
@@ -707,15 +707,15 @@ InputIt findSecond(InputIt first, InputIt last, Compare comp = {})
 }
 
 // 随机划分
-template<typename InputIt, typename RandomEngine = std::default_random_engine, typename Compare = std::less<itvalue_type<InputIt>>>
+template<typename InputIt, typename RandomEngine = std::default_random_engine, typename Compare = std::less<typename std::iterator_traits<InputIt>::value_type>>
 InputIt randomPartition(InputIt first, InputIt last, RandomEngine engine = RandomEngine{std::random_device()()}, Compare comp = {})
 {
 	if (first == last)
 		return first;
 	std::iter_swap(std::prev(last), std::next(first, std::uniform_int_distribution<>(0, std::distance(first, last) - 1)(engine)));
 	InputIt lastPrev(std::prev(last));
-	const itvalue_type<InputIt> &key = *lastPrev;
-	size_t count = 0;
+	const typename std::iterator_traits<InputIt>::value_type &key = *lastPrev;
+	std::size_t count = 0;
 	for (InputIt current = first; current != lastPrev; ++current)
 		if (*current == key)
 			++count;
@@ -726,12 +726,12 @@ InputIt randomPartition(InputIt first, InputIt last, RandomEngine engine = Rando
 }
 
 // 划分
-template<typename InputIt, typename Compare = std::less<itvalue_type<InputIt>>>
+template<typename InputIt, typename Compare = std::less<typename std::iterator_traits<InputIt>::value_type>>
 InputIt partition(InputIt first, InputIt last, Compare comp = {})
 {
 	InputIt lastPrev(std::prev(last));
-	const itvalue_type<InputIt> &key = *lastPrev;
-	size_t count = 0, size = std::distance(first, lastPrev);
+	const typename std::iterator_traits<InputIt>::value_type &key = *lastPrev;
+	std::size_t count = 0, size = std::distance(first, lastPrev);
 	for (InputIt current = first; current != lastPrev; ++current)
 	{
 		if (comp(key, *current)) continue;
@@ -744,8 +744,8 @@ InputIt partition(InputIt first, InputIt last, Compare comp = {})
 }
 
 // 搜索第i小元素
-template<typename InputIt, typename Compare = std::less<itvalue_type<InputIt>>>
-InputIt randomSelect(InputIt first, InputIt last, size_t i, Compare comp = {})
+template<typename InputIt, typename Compare = std::less<typename std::iterator_traits<InputIt>::value_type>>
+InputIt randomSelect(InputIt first, InputIt last, std::size_t i, Compare comp = {})
 {
 	if (std::distance(first, last) < i + 1) return last;
 	while (std::distance(first, last) > 1)
@@ -765,8 +765,8 @@ InputIt randomSelect(InputIt first, InputIt last, size_t i, Compare comp = {})
 }
 
 // 搜索第i小元素(递归)
-template<typename InputIt, typename Compare = std::less<itvalue_type<InputIt>>>
-InputIt recRandomSelect(InputIt first, InputIt last, size_t i, Compare comp = {})
+template<typename InputIt, typename Compare = std::less<typename std::iterator_traits<InputIt>::value_type>>
+InputIt recRandomSelect(InputIt first, InputIt last, std::size_t i, Compare comp = {})
 {
 	if (std::distance(first, last) <= 1)
 		return first;
@@ -779,13 +779,13 @@ InputIt recRandomSelect(InputIt first, InputIt last, size_t i, Compare comp = {}
 }
 
 // 搜索第i小元素(递归)
-template<typename InputIt, typename Compare = std::less<itvalue_type<InputIt>>>
+template<typename InputIt, typename Compare = std::less<typename std::iterator_traits<InputIt>::value_type>>
 InputIt selectBase(std::vector<InputIt> &&vec, Compare comp = {})
 {
 	if (vec.empty()) return {};
 	std::vector<InputIt> tmp;
 	typename std::vector<InputIt>::iterator first = vec.begin(), last = vec.end(), old;
-	for (size_t i = 0, c = vec.size() / 5; i < c; ++i)
+	for (std::size_t i = 0, c = vec.size() / 5; i < c; ++i)
 	{
 		old = first;
 		std::sort(old, first += 5, [comp](auto a, auto b) { return comp(*a, *b); });
@@ -799,11 +799,11 @@ InputIt selectBase(std::vector<InputIt> &&vec, Compare comp = {})
 	return tmp.size() == 1 ? vec.front() : selectBase(std::move(tmp), comp);
 }
 
-template<typename InputIt, typename Compare = std::less<itvalue_type<InputIt>>>
-InputIt select(InputIt first, InputIt last, size_t i, Compare comp = {})
+template<typename InputIt, typename Compare = std::less<typename std::iterator_traits<InputIt>::value_type>>
+InputIt select(InputIt first, InputIt last, std::size_t i, Compare comp = {})
 {
-	using value_type = itvalue_type<InputIt>;
-	size_t size = std::distance(first, last);
+	using value_type = typename std::iterator_traits<InputIt>::value_type;
+	std::size_t size = std::distance(first, last);
 	if (size <= 1)
 		return first;
 	std::vector<InputIt> vec(std::distance(first, last));
@@ -818,11 +818,11 @@ InputIt select(InputIt first, InputIt last, size_t i, Compare comp = {})
 }
 
 // 划分
-template<typename InputIt, typename Compare = std::less<itvalue_type<InputIt>>, typename Equal = std::equal_to<itvalue_type<InputIt>>>
+template<typename InputIt, typename Compare = std::less<typename std::iterator_traits<InputIt>::value_type>, typename Equal = std::equal_to<typename std::iterator_traits<InputIt>::value_type>>
 std::pair<InputIt, InputIt> equalPartition(InputIt first, InputIt last, Compare comp = {}, Equal equal= {})
 {
 	InputIt end = last, beg = first;
-	const itvalue_type<InputIt> &key = *std::prev(last);
+	const typename std::iterator_traits<InputIt>::value_type &key = *std::prev(last);
 	while (first < last)
 	{
 		if (comp(key, *first))
@@ -835,10 +835,10 @@ std::pair<InputIt, InputIt> equalPartition(InputIt first, InputIt last, Compare 
 }
 
 // Hoare划分
-template<typename InputIt, typename Compare = std::less<itvalue_type<InputIt>>>
+template<typename InputIt, typename Compare = std::less<typename std::iterator_traits<InputIt>::value_type>>
 InputIt hoarePartition(InputIt first, InputIt last, Compare comp = {})
 {
-	const itvalue_type<InputIt> key = *first;
+	const typename std::iterator_traits<InputIt>::value_type key = *first;
 	--last;
 	while (true)
 	{
@@ -865,9 +865,9 @@ InputIt partitionPred(InputIt first, InputIt last, UnaryPredicate pred)
 
 // 8.2-4
 template<typename InputIt>
-size_t rangeCount(InputIt first, InputIt last, size_t min, size_t max)
+std::size_t rangeCount(InputIt first, InputIt last, std::size_t min, std::size_t max)
 {
-	using integral_t = itvalue_type<InputIt>;
+	using integral_t = typename std::iterator_traits<InputIt>::value_type;
 	std::vector<integral_t> counts(max - min + 1);
 	while (first != last)
 	{
@@ -875,13 +875,13 @@ size_t rangeCount(InputIt first, InputIt last, size_t min, size_t max)
 			++counts[*first - min];
 		++first;
 	}
-	return std::accumulate(counts.cbegin(), counts.cend(), size_t{});
+	return std::accumulate(counts.cbegin(), counts.cend(), std::size_t{});
 }
 
 template<typename InputIt>
-size_t rangeCount2(InputIt first, InputIt last, size_t min, size_t max)
+std::size_t rangeCount2(InputIt first, InputIt last, std::size_t min, std::size_t max)
 {
-	using integral_t = itvalue_type<InputIt>;
+	using integral_t = typename std::iterator_traits<InputIt>::value_type;
 	std::vector<integral_t> counts(*std::max_element(first, last) + 1);
 	while (first != last)
 		++counts[*first++];
@@ -896,7 +896,7 @@ namespace sort {
  * Sort Algorihm: 直接插入排序
  * 渐近时间复杂度: O(n^2)
  */
-template<typename T, typename CompareType = std::less<itvalue_type<T>>>
+template<typename T, typename CompareType = std::less<typename std::iterator_traits<T>::value_type>>
 void insertSort(T first, T last, CompareType comp = CompareType{})
 {
 
@@ -920,7 +920,7 @@ void insertSort(T first, T last, CompareType comp = CompareType{})
  * Sort Algorithm: 选择排序
  * 渐近时间复杂度: O(n^2)
  */
-template<typename T, typename CompareType = std::less<itvalue_type<T>>>
+template<typename T, typename CompareType = std::less<typename std::iterator_traits<T>::value_type>>
 void selectSort(T first, T last, CompareType comp = CompareType{})
 {
 	T index;
@@ -938,7 +938,7 @@ void selectSort(T first, T last, CompareType comp = CompareType{})
  * Merge: 归并
  * 渐进时间复杂度: O(n)
  */
-template<typename InputIt1, typename InputIt2, typename OutputIt, typename Compare = std::less<itvalue_type<InputIt1>>>
+template<typename InputIt1, typename InputIt2, typename OutputIt, typename Compare = std::less<typename std::iterator_traits<InputIt1>::value_type>>
 OutputIt merge(InputIt1 fst1, InputIt1 lst1, InputIt2 fst2, InputIt2 lst2, OutputIt dest, Compare comp = {})
 {
 	for (;fst1 != lst1; ++dest)
@@ -957,7 +957,7 @@ OutputIt merge(InputIt1 fst1, InputIt1 lst1, InputIt2 fst2, InputIt2 lst2, Outpu
  * Sort Algorithm: 递归归并排序
  * 渐近时间复杂度: O(n lg n)
  */
-template<typename T, typename Compare = std::less<itvalue_type<T>>>
+template<typename T, typename Compare = std::less<typename std::iterator_traits<T>::value_type>>
 void recMergeSort(T first, T last, Compare comp = {})
 {
 	if (auto dis = std::distance(first, last); dis > 1)
@@ -966,7 +966,7 @@ void recMergeSort(T first, T last, Compare comp = {})
 		std::advance(mid, dis / 2);
 		recMergeSort(first, mid, comp);
 		recMergeSort(mid, last, comp);
-		std::vector<itvalue_type<T>> tmp(dis);
+		std::vector<typename std::iterator_traits<T>::value_type> tmp(dis);
 		sort::merge(first, mid, mid, last, tmp.begin(), comp);
 		std::copy(tmp.cbegin(), tmp.cend(), first);
 	}
@@ -974,7 +974,7 @@ void recMergeSort(T first, T last, Compare comp = {})
 
 // 快速排序随机化版本
 // 相比与普通版本，划分更为均衡，即使输入数据处于基本有序，其运行时间依然为O(n lg n)（普通版本运行时间为O(n^2)）
-template<typename InputIt, typename Compare = std::less<itvalue_type<InputIt>>>
+template<typename InputIt, typename Compare = std::less<typename std::iterator_traits<InputIt>::value_type>>
 void recQuickSort(InputIt first, InputIt last, Compare comp = {})
 {
 	static std::uniform_int_distribution<typename std::iterator_traits<InputIt>::difference_type> dist;
@@ -997,7 +997,7 @@ void recQuickSort(InputIt first, InputIt last, Compare comp = {})
 }
 
 // Hoare划分快速排序
-template<typename InputIt, typename Compare = std::less<itvalue_type<InputIt>>>
+template<typename InputIt, typename Compare = std::less<typename std::iterator_traits<InputIt>::value_type>>
 void recHoareQuickSort(InputIt first, InputIt last, Compare comp = {})
 {
 	if (first >= last)
@@ -1009,9 +1009,9 @@ void recHoareQuickSort(InputIt first, InputIt last, Compare comp = {})
 
 // 计数排序 - O(n)
 template<typename InputIt>
-std::vector<itvalue_type<InputIt>> countingSort(InputIt first, InputIt last, size_t maxRange)
+std::vector<typename std::iterator_traits<InputIt>::value_type> countingSort(InputIt first, InputIt last, std::size_t maxRange)
 {
-	using integral_t = itvalue_type<InputIt>;
+	using integral_t = typename InputIt::value_type;
 
 	std::vector<integral_t> counts(maxRange + 1);
 	for (InputIt beg = first; beg != last; ++beg)
@@ -1026,15 +1026,15 @@ std::vector<itvalue_type<InputIt>> countingSort(InputIt first, InputIt last, siz
 	return result;
 }
 template<typename InputIt>
-std::vector<itvalue_type<InputIt>> autoCountingSort(InputIt first, InputIt last) {
+std::vector<typename std::iterator_traits<InputIt>::value_type> autoCountingSort(InputIt first, InputIt last) {
 	return countingSort(first, last, *std::max_element(first, last));
 }
 
 // 指定闭区间最小值计数排序
 template<typename InputIt, typename OutputIt>
-OutputIt rangeCountingSort(InputIt first, InputIt last, itvalue_type<InputIt> min, itvalue_type<InputIt> max, OutputIt dest)
+OutputIt rangeCountingSort(InputIt first, InputIt last, typename InputIt::value_type min, typename InputIt::value_type max, OutputIt dest)
 {
-	using integral_t = itvalue_type<InputIt>;
+	using integral_t = typename InputIt::value_type;
 	static_assert(std::is_unsigned_v<integral_t>);
 
 	std::vector<integral_t> counts(max - min + 1);
@@ -1049,9 +1049,9 @@ OutputIt rangeCountingSort(InputIt first, InputIt last, itvalue_type<InputIt> mi
 
 // 计数排序(原址排序) - O(n)
 template<typename InputIt>
-void inplaceCountingSort(InputIt first, InputIt last, itvalue_type<InputIt> maxRange)
+void inplaceCountingSort(InputIt first, InputIt last, typename std::iterator_traits<InputIt>::value_type maxRange)
 {
-	using integral_t = itvalue_type<InputIt>;
+	using integral_t = typename std::iterator_traits<InputIt>::value_type;
 
 	std::vector<integral_t> counts(maxRange + 1);
 	for (InputIt beg = first; beg != last; ++beg)
@@ -1060,9 +1060,9 @@ void inplaceCountingSort(InputIt first, InputIt last, itvalue_type<InputIt> maxR
 	std::vector<integral_t> indexes(counts.size());
 
 	InputIt current = first;
-	for (size_t i = 0, sz = last - first; i < sz; ++i, ++current)
+	for (std::size_t i = 0, sz = last - first; i < sz; ++i, ++current)
 	{
-		size_t curIndex = std::distance(first, current);
+		std::size_t curIndex = std::distance(first, current);
 		while (curIndex >= counts[*current] || (*current ? curIndex < counts[*current - 1] : false))
 			std::iter_swap(current, std::next(first, counts[*current] - ++indexes[*current]));
 	}
@@ -1070,23 +1070,23 @@ void inplaceCountingSort(InputIt first, InputIt last, itvalue_type<InputIt> maxR
 
 // 桶排序 - O(n)
 template<typename InputIt, typename OutputIt>
-void bucketSort(InputIt first, InputIt last, itvalue_type<InputIt> bucketSize, OutputIt dest)
+void bucketSort(InputIt first, InputIt last, typename InputIt::value_type bucketSize, OutputIt dest)
 {
-	using value_type = itvalue_type<InputIt>;
+	using value_type = typename InputIt::value_type;
 	std::vector<std::vector<value_type>> buckets(bucketSize + 1);
 
 	for (;first != last; ++first)
 		buckets[*first / 10].emplace_back(*first);
 
-	for (size_t i = 0; i < buckets.size(); ++i)
+	for (std::size_t i = 0; i < buckets.size(); ++i)
 		dest = rangeCountingSort(buckets[i].cbegin(), buckets[i].cend(), i * 10, i * 10 + 9, dest);
 }
 
 // 桶排序 - O(n)
 template<typename InputIt, typename OutputIt>
-void bucketInsertSort(InputIt first, InputIt last, itvalue_type<InputIt> bucketSize, OutputIt dest)
+void bucketInsertSort(InputIt first, InputIt last, typename InputIt::value_type bucketSize, OutputIt dest)
 {
-	using value_type = itvalue_type<InputIt>;
+	using value_type = typename InputIt::value_type;
 	std::vector<std::vector<value_type>> buckets(bucketSize + 1);
 
 	for (;first != last; ++first)
@@ -1103,27 +1103,27 @@ void bucketInsertSort(InputIt first, InputIt last, itvalue_type<InputIt> bucketS
 template<typename InputIt>
 void integerRadixSort(InputIt first, InputIt last)
 {
-	using value_type = itvalue_type<InputIt>;
+	using value_type = typename std::iterator_traits<InputIt>::value_type;
 	static_assert(std::is_unsigned_v<value_type>);
 
-	size_t digit = 0;
+	std::size_t digit = 0;
 	for (auto beg = first; beg != last; ++beg)
 		if (auto ret = algoBase::numDigit(*beg); digit < ret)
 			digit = ret;
-	for (size_t i = 0; i < digit; ++i)
+	for (std::size_t i = 0; i < digit; ++i)
 	{
 #if 0
 		std::vector<algoBase::ValueIndex<value_type>> vec;
-		size_t index = 0;
+		std::size_t index = 0;
 		for (InputIt beg = first; beg != last; ++beg, ++index)
 			vec.emplace_back(algoBase::getBit(*beg, i), index);
-		vec = countingSort(vec.begin(), vec.end(), size_t(9));
+		vec = countingSort(vec.begin(), vec.end(), std::size_t(9));
 		index = 0;
 		std::vector<value_type> temp(first, last);
 		for (InputIt beg = first; beg != last; ++beg, ++index)
 			*beg = temp[vec[index].index];
 #endif
-		std::vector<size_t> counts(10);
+		std::vector<std::size_t> counts(10);
 		for (InputIt beg = first; beg != last; ++beg)
 			++counts[algoBase::getBit(*beg, i)];
 		std::partial_sum(counts.cbegin(), counts.cend(), counts.begin());
@@ -1135,15 +1135,15 @@ void integerRadixSort(InputIt first, InputIt last)
 }
 // 整型数组基数排序 - O(n)
 template<template<typename> typename Container, typename Array>
-void arrayRadixSort(Container<Array> &cont, size_t min, size_t max, size_t base)
+void arrayRadixSort(Container<Array> &cont, std::size_t min, std::size_t max, std::size_t base)
 {
-	for (size_t i = 0; i < base; ++i)
+	for (std::size_t i = 0; i < base; ++i)
 	{
-		std::vector<size_t> counts(max - min + 1);
+		std::vector<std::size_t> counts(max - min + 1);
 		for (auto beg = cont.cbegin(); beg != cont.cend(); ++beg)
 			++counts[std::size(*beg) <= i ? 0 : (*beg)[std::size(*beg) - i - 1] - min];
 		std::partial_sum(counts.cbegin(), counts.cend(), counts.begin());
-		size_t index = 0;
+		std::size_t index = 0;
 		Container<Array> temp(cont.size());
 		for (auto beg(std::prev(cont.end())), end(std::prev(cont.begin())); beg != end; --beg, ++index)
 			temp[--counts[std::size(*beg) <= i ? 0 : (*beg)[std::size(*beg) - i - 1] - min]] = std::move(*beg);
@@ -1154,7 +1154,7 @@ void arrayRadixSort(Container<Array> &cont, size_t min, size_t max, size_t base)
 
 // 列排序
 template<typename value_type>
-void columnSort(std::valarray<value_type> &ary, size_t r, size_t s)
+void columnSort(std::valarray<value_type> &ary, std::size_t r, std::size_t s)
 {
 	// s必须是r的因子
 	assert(r % s == 0);
@@ -1192,7 +1192,7 @@ void columnSort(std::valarray<value_type> &ary, size_t r, size_t s)
 namespace algo {
 
 // 最小值最大值
-template<typename InputIt, typename Compare = std::less<itvalue_type<InputIt>>>
+template<typename InputIt, typename Compare = std::less<typename std::iterator_traits<InputIt>::value_type>>
 std::pair<InputIt, InputIt> minmax(InputIt beg, InputIt end, Compare comp = Compare{})
 {
 	InputIt min, max;
@@ -1229,15 +1229,17 @@ std::pair<InputIt, InputIt> minmax(InputIt beg, InputIt end, Compare comp = Comp
 }
 
 // 斐波那契数列
-constexpr std::uintmax_t binaryFibonacci(size_t n) {
+constexpr std::uintmax_t binaryFibonacci(std::size_t n) {
 	return (n >= 2) ? binaryFibonacci(n - 1) + binaryFibonacci(n - 2) : n;
 }
 // 直接求值n为90以下的斐波那契数
-std::uintmax_t fibonacci(std::uintmax_t n) {
-	return std::pow((1 + std::sqrt(5.0l)) / 2.0l, n) / std::sqrt(5.0l) + 0.5l;
+std::uintmax_t fibonacci(std::uintmax_t n)
+{
+	constexpr long double a = (1 + std::sqrt(5.0l)) / 2.0l;
+	return std::pow(a, n) / std::sqrt(5.0l) + 0.5l;
 }
 // 自底向下 - O(n)
-std::uintmax_t baseRecFibo(std::vector<std::uintmax_t> &results, size_t n)
+std::uintmax_t baseRecFibo(std::vector<std::uintmax_t> &results, std::size_t n)
 {
 	if (results[n] > 0 || n == 0)
 		return results[n];
@@ -1246,7 +1248,7 @@ std::uintmax_t baseRecFibo(std::vector<std::uintmax_t> &results, size_t n)
 		throw std::underflow_error(std::to_string(n) + "的斐波那契数发生上溢");
 	return results[n];
 }
-std::uintmax_t recFibo(size_t n)
+std::uintmax_t recFibo(std::size_t n)
 {
 	if (n <= 2)
 		return n ? 1 : 0;
@@ -1255,10 +1257,10 @@ std::uintmax_t recFibo(size_t n)
 	return baseRecFibo(results, n);
 }
 // 自底向上 - O(n)
-std::uintmax_t fibo(size_t n)
+std::uintmax_t fibo(std::size_t n)
 {
 	std::uintmax_t sum = 1, next = 1;
-	for (size_t i = 2; i < n; ++i)
+	for (std::size_t i = 2; i < n; ++i)
 		sum += std::exchange(next, sum);
 	return sum;
 }
@@ -1286,7 +1288,7 @@ std::pair<InputIt, InputIt> findMaxDifference(InputIt first, InputIt mid, InputI
 
 // 查找最大子数组 - O(n lg n)
 template<typename InputIt>
-std::tuple<InputIt, InputIt, itvalue_type<InputIt>> recFindMaxSubArray(InputIt first, InputIt last)
+std::tuple<InputIt, InputIt, typename std::iterator_traits<InputIt>::value_type> recFindMaxSubArray(InputIt first, InputIt last)
 {
 	if (std::distance(first, last) <= 1)
 		return { first, last, (first == last) ? 0 : *first };
@@ -1305,9 +1307,9 @@ std::tuple<InputIt, InputIt, itvalue_type<InputIt>> recFindMaxSubArray(InputIt f
 }
 
 template<typename InputIt>
-std::tuple<InputIt, InputIt, itvalue_type<InputIt>> myFindMaxSubArray(InputIt first, InputIt last)
+std::tuple<InputIt, InputIt, typename std::iterator_traits<InputIt>::value_type> myFindMaxSubArray(InputIt first, InputIt last)
 {
-	using value_t = itvalue_type<InputIt>;
+	using value_t = typename std::iterator_traits<InputIt>::value_type;
 	value_t maxVal{std::numeric_limits<value_t>::lowest()}, sum{};
 	InputIt maxBeg = first, maxEnd = maxBeg, tmpBeg = first;
 	while (first != last)
@@ -1331,9 +1333,9 @@ std::tuple<InputIt, InputIt, itvalue_type<InputIt>> myFindMaxSubArray(InputIt fi
 
 // 查找最大子数组 - O(n)
 template<typename InputIt>
-std::tuple<InputIt, InputIt, itvalue_type<InputIt>> findMaxSubArray(InputIt first, InputIt last)
+std::tuple<InputIt, InputIt, typename std::iterator_traits<InputIt>::value_type> findMaxSubArray(InputIt first, InputIt last)
 {
-	using value_type = itvalue_type<InputIt>;
+	using value_type = typename std::iterator_traits<InputIt>::value_type;
 	constexpr value_type lowest = std::numeric_limits<value_type>::lowest();
 
 	InputIt maxStart = first, maxEnd = first, temp = first;
@@ -1375,7 +1377,7 @@ std::intmax_t mod(std::intmax_t a, std::intmax_t b, std::intmax_t m)
 namespace heap {
 
 // 维护堆性质
-template<typename RandomIt, typename Compare = std::less<itvalue_type<RandomIt>>>
+template<typename RandomIt, typename Compare = std::less<typename std::iterator_traits<RandomIt>::value_type>>
 void heapify(RandomIt first, RandomIt last, RandomIt current, Compare comp = {})
 {
 	RandomIt left, right, oldtemp;
@@ -1394,7 +1396,7 @@ void heapify(RandomIt first, RandomIt last, RandomIt current, Compare comp = {})
 }
 
 // 建堆
-template<typename RandomIt, typename Compare = std::less<itvalue_type<RandomIt>>>
+template<typename RandomIt, typename Compare = std::less<typename std::iterator_traits<RandomIt>::value_type>>
 void makeHeap(RandomIt first, RandomIt last, Compare comp = {})
 {
 	if (first < last)
@@ -1403,7 +1405,7 @@ void makeHeap(RandomIt first, RandomIt last, Compare comp = {})
 }
 
 // 是否满足堆性质
-template<typename RandomIt, typename Compare = std::less_equal<itvalue_type<RandomIt>>>
+template<typename RandomIt, typename Compare = std::less_equal<typename std::iterator_traits<RandomIt>::value_type>>
 bool isHeap(RandomIt first, RandomIt last, RandomIt current, Compare comp = {})
 {
 	RandomIt left = first + ((current - first) * 2 + 1), right = left + 1;
@@ -1411,13 +1413,13 @@ bool isHeap(RandomIt first, RandomIt last, RandomIt current, Compare comp = {})
 		return false;
 	return ((left < last) ? isHeap(first, last, left, comp) : true) && ((right < last) ? isHeap(first, last, right, comp) : true);
 }
-template<typename RandomIt, typename Compare = std::less_equal<itvalue_type<RandomIt>>>
+template<typename RandomIt, typename Compare = std::less_equal<typename std::iterator_traits<RandomIt>::value_type>>
 bool isHeap(RandomIt first, RandomIt last, Compare comp = {}) {
 	return isHeap(first, last, first, comp);
 }
 
 // "弹出"最大/最小元素
-template<typename RandomIt, typename Compare = std::less<itvalue_type<RandomIt>>>
+template<typename RandomIt, typename Compare = std::less<typename std::iterator_traits<RandomIt>::value_type>>
 void popHeap(RandomIt first, RandomIt last, Compare comp = {})
 {
 	std::iter_swap(first, std::prev(last));
@@ -1425,13 +1427,13 @@ void popHeap(RandomIt first, RandomIt last, Compare comp = {})
 }
 
 // 将prev(last)处的元素插入栈
-template<typename RandomIt, typename Compare = std::less<itvalue_type<RandomIt>>>
+template<typename RandomIt, typename Compare = std::less<typename std::iterator_traits<RandomIt>::value_type>>
 void pushHeap(RandomIt first, RandomIt last, Compare comp = {})
 {
 	if (std::distance(first, last) <= 0) return;
 	RandomIt beg = std::prev(last);
-	size_t size = last - first;
-	itvalue_type<RandomIt> key(std::move(*beg));
+	std::size_t size = last - first;
+	typename std::iterator_traits<RandomIt>::value_type key(std::move(*beg));
 	while (first < beg)
 	{
 		RandomIt p = first + ((beg - first + 1) / 2 - 1);
@@ -1444,7 +1446,7 @@ void pushHeap(RandomIt first, RandomIt last, Compare comp = {})
 }
 
 // 删除指定元素
-template<typename RandomIt, typename Compare = std::less<itvalue_type<RandomIt>>>
+template<typename RandomIt, typename Compare = std::less<typename std::iterator_traits<RandomIt>::value_type>>
 void eraseHeap(RandomIt first, RandomIt last, RandomIt target, Compare comp = {})
 {
 	bool b = comp(*target, *std::prev(last));
@@ -1455,7 +1457,7 @@ void eraseHeap(RandomIt first, RandomIt last, RandomIt target, Compare comp = {}
 }
 
 // 堆排序
-template<typename RandomIt, typename Compare = std::less<itvalue_type<RandomIt>>>
+template<typename RandomIt, typename Compare = std::less<typename std::iterator_traits<RandomIt>::value_type>>
 void sortHeap(RandomIt first, RandomIt last, Compare comp = {})
 {
 	for (auto fnext = std::next(first); fnext < last; --last)
@@ -1473,7 +1475,7 @@ Link mergeLink(Vec<Link> &list, Compare comp = {})
 		return rhs.second > lhs.second;
 	};
 
-	for (size_t i = 0; i < list.size(); ++i)
+	for (std::size_t i = 0; i < list.size(); ++i)
 		minHeap.emplace_back(i, list[i].size());
 	makeHeap(minHeap.begin(), minHeap.end(), heapCompare);
 
@@ -1526,15 +1528,15 @@ Link KwayMerge(Vec<Link> &list, Compare comp = {})
 }
 
 template<typename T>
-bool check(const std::valarray<T> &array, size_t r, size_t s)
+bool check(const std::valarray<T> &array, std::size_t r, std::size_t s)
 {
-	for (size_t i = 0; i < s; ++i)
+	for (std::size_t i = 0; i < s; ++i)
 	{
 		std::valarray<T> tmp(array[std::slice(i, r, s)]);
 		if (!std::is_sorted(std::begin(tmp), std::end(tmp)))
 			return false;
 	}
-	for (size_t i = 0; i < r; ++i)
+	for (std::size_t i = 0; i < r; ++i)
 	{
 		std::valarray<T> tmp(array[std::slice(i * s, s, 1)]);
 		if (!std::is_sorted(std::begin(tmp), std::end(tmp)))
@@ -1543,24 +1545,101 @@ bool check(const std::valarray<T> &array, size_t r, size_t s)
 	return true;
 }
 
+int hoare_partition(int arr[],int p,int q){
+    int i,j,x,t;
+    x=arr[p];
+    i=p;
+    j=q;
+    while(1){
+		for(;i<q && arr[i] < x;i++);
+		for(;j>p && arr[j]>=x;j--);
+        if(i<j){
+            t = arr[i];
+            arr[i] = arr[j];
+            arr[j] = t;
+        }else{
+            return j;
+	}
+    }
+}
+
+std::list<int> func(std::vector<int> &v, int low, int high)
+{
+	std::cout << low << ' ' << high << std::endl;
+	if (low == high)
+		return std::list<int>{v[low]};
+	std::vector<std::vector<int>> dp;
+	int mid = (low + high) / 2;
+	auto a = func(v, low, mid);
+	auto b = func(v, mid + 1, high);
+	if (a.back() < b.front())
+	{
+		std::cout << a.back() << ' ' << b.front() << std::endl;
+		a.splice(a.end(), b);
+		return a;
+	}
+	else if (b.back() < a.front())
+	{
+		b.splice(b.end(), a);
+		return b;
+	}
+	return (a.size() < b.size()) ? b : a;
+}
+
 // test
 int main(int argv, char **)
 {
 	// timer
 	test::Timer<> timer;
 
+	auto rand = std::bind(std::uniform_int_distribution<int>(10000, 20000), std::default_random_engine(std::random_device()()));
+	auto rand2 = std::bind(std::uniform_int_distribution<int>(0, 25), std::default_random_engine(std::random_device()()));
+
+	std::string s1 = "AAAAAAAAAAAAAAAAAAA";
+	std::string s2 = "                   ";
+
+	timer.start();
+	std::cout << std::boolalpha << (algo::LPS(s1.begin(), s1.end(), s2.begin()) == s2.end()) << std::endl;
+	std::cout << s2 << std::endl;
+	std::cout << "用时: " << timer.finish().count() << std::endl;
+
 	// random
 	auto rand = std::bind(std::uniform_int_distribution<int>(0, 2000000000), std::default_random_engine(std::random_device()()));
 
 	// init
+	Tree<int, node::RedBlackNode> t;
 	std::vector<int> v, d;
 	test::loadRandomNum(v, rand, 5000000);
+	for (int i : v)
+		t.insert(i);
+	std::random_shuffle(v.begin(), v.end());
 
 	// test
 	timer.start();
-	heap::makeHeap(v.begin(), v.end());
-
+	for (int i = 0; i < 4500000; ++i)
+	{
+		auto it = t.find(v[i]);
+		if (it == t.end())
+			throw;
+		t.erase(it);
+	}
 	std::cout << "用时: " << timer.finish().count() << std::endl;
+	std::cout << "size: " << t.size() << std::endl;
 
 	// check
+	v.erase(v.begin(), v.begin() + 4500000);
+	std::sort(v.begin(), v.end());
+	auto b = t.begin();
+	std::cout << std::boolalpha;
+	for (int i : v)
+	{
+		if (*b != i)
+			break;
+		++b;
+	}
+	std::cout << (t.begin() != t.end()) << std::endl;
+	std::cout << (t.find(888888888) == t.end()) << std::endl;
+
+	std::cout << *t.begin() << ' ' << *(--t.end()) << std::endl;
+	std::cout << v.front() << ' ' << v.back() << std::endl;
 }

@@ -84,7 +84,7 @@ struct RedBlackNode<Key>::RbTreeBalanceStrategy : public TreeOp<RedBlackNode<Key
 		std::swap(this->sentry.sentry, rhs.sentry.sentry);
 	}
 
-	void insert(node_type *&root, node_type *node)
+	void insert(node_type *&root, node_type *current, node_type *node)
 	{
 		if (root == &node_type::null)
 		{
@@ -94,7 +94,7 @@ struct RedBlackNode<Key>::RbTreeBalanceStrategy : public TreeOp<RedBlackNode<Key
 		}
 		else
 		{
-			auto [target, dire] = TreeOp<node_type>::findInsertionPoint(root, node, comp);
+			auto [target, dire] = TreeOp<node_type>::findInsertionPoint(current, node->value(), comp);
 			node->p = const_cast<node_type*>(target);
 			node->p->*dire = node;
 		}
@@ -155,6 +155,10 @@ struct RedBlackNode<Key>::RbTreeBalanceStrategy : public TreeOp<RedBlackNode<Key
 
 	const node_type* find(const node_type *root, const typename Compare::key_type &key) const {
 		return TreeOperation::findNode(root, key, comp);
+	}
+
+	std::pair<const node_type*, bool> findOrInsert(const node_type *root, const typename Compare::key_type &key) const {
+		return TreeOperation::findInsertionPointOrNode(root, key, comp);
 	}
 
 protected:

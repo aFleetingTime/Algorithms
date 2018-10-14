@@ -19,7 +19,7 @@ std::basic_istream<CharT>& operator>>(std::basic_istream<CharT>&, HuffmanTree<Ch
 template<typename CharT, typename BitsT, template<typename...> typename Map>
 std::basic_ostream<CharT>& operator<<(std::basic_ostream<CharT>&, const HuffmanTree<CharT, BitsT, Map>&);
 
-template<typename CharT = char, typename BitsT, template<typename...> typename Map = std::map>
+template<typename CharT = char, typename BitsT = unsigned, template<typename...> typename Map = std::map>
 class HuffmanTree
 {
 	static_assert(sizeof(CharT) <= sizeof(BitsT) && std::is_unsigned_v<BitsT>);
@@ -211,7 +211,7 @@ typename HuffmanTree<CharT, BitsT, Map>::String HuffmanTree<CharT, BitsT, Map>::
 		Bitset bit = bitBuf << bitsetSize - count;
 		for (BitsetSizeType i = 1, j = count / charBitSize; i <= j; ++i)
 		{
-			result.push_back(bit >> bitsetSize - i * charBitSize);
+			result.push_back(bit >> (bitsetSize - i * charBitSize));
 			count -= charBitSize;
 		}
 	}

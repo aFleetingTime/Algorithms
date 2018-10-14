@@ -62,7 +62,7 @@ public:
 
 	Tree(const Compare &c) : balance(c), root(&node_type::null), nodeCount(0) { }
 
-	Tree(Tree &&rhs) : balance(std::move(rhs)), alloc(rhs.alloc), root(rhs.root), nodeCount(rhs.nodeCount)
+	Tree(Tree &&rhs) noexcept : balance(std::move(rhs)), alloc(rhs.alloc), root(rhs.root), nodeCount(rhs.nodeCount)
 	{
 		rhs.root = &node_type::null;
 		rhs.nodeCount = 0;
@@ -84,16 +84,17 @@ public:
 	}
 
 	void swap(Tree &rhs) noexcept {
-		std::swap(alloc, rhs.alloc);
-		std::swap(root, rhs.root);
-		std::swap(nodeCount, rhs.nodeCount);
+		using std::swap;
+		swap(alloc, rhs.alloc);
+		swap(root, rhs.root);
+		swap(nodeCount, rhs.nodeCount);
 		balance::swap(rhs);
 	}
 
 
 	const_iterator insert(const value_type &key) {
 		node_type *newNode = createNode(key);
-		balance::insert(root, newNode);
+		balance::insert(root, root, newNode);
 		++nodeCount;
 		return iterator(newNode);
 	}
@@ -104,7 +105,7 @@ public:
 	const_iterator emplace(Args&&... args)
 	{
 		node_type *newNode = createNode(std::forward<Args>(args)...);
-		balance::insert(root, newNode);
+		balance::insert(root, root, newNode);
 		++nodeCount;
 		return iterator(newNode);
 	}
@@ -133,7 +134,7 @@ public:
 	node_type* pubroot() { return root; }
 	node_type* pubnull() { return &node_type::null; }
 
-private:
+protected:
 	Alloc alloc;
 	node_type *root;
 	size_type nodeCount;
@@ -157,9 +158,6 @@ private:
 		alloc.deallocate(node, 1);
 	}
 };
-
-template<typename Key, template<typename> typename Node, typename Compare, typename Alloc>
-void std::swap(Tree<Key, Node, Compare, Alloc> &lhs, Tree<Key, Node, Compare, Alloc> &rhs) { lhs.swap(rhs); }
 
 template<typename Key, typename Value, template<typename> typename Node,
 	     typename Compare = std::less<Key>, typename Alloc = std::allocator<Node<std::pair<const Key, Value>>>>
@@ -197,18 +195,27 @@ public:
 
 	mapped_type& operator[](const typename base::key_type &key)
 	{
-		iterator res = find(key);
-		if (res.node != &base::node_type::null)
-			return res->second;
-		return insert(typename base::value_type{key, {}})->second;
+		if (base::root != &base::node_type::null)
+			return const_cast<typename base::node_type*>(base::insert(typename base::value_type{key, {}}).node)->value().second;
+		auto [node, exist] = base::balance::findOrInsert(base::root, key);
+		if (exist)
+			return const_cast<typename base::node_type*>(node)->value().second;
+		typename base::node_type *res = base::createNode(typename base::value_type{key, {}});
+		base::balance::insert(base::root, const_cast<typename base::node_type*>(node), res);
+		++base::nodeCount;
+		return res->value().second;
 	}
 	mapped_type& operator[](typename base::key_type &&key)
 	{
-		iterator res = find(key);
-		if (res.node != &base::node_type::null)
-			return res->second;
-		int i = 0;
-		return insert(typename base::value_type{std::move(key), {}})->second;
+		if (base::root != &base::node_type::null)
+			return const_cast<typename base::node_type*>(base::insert(typename base::value_type{std::move(key), {}}).node)->value().second;
+		auto [node, exist] = base::balance::findOrInsert(base::root, key);
+		if (exist)
+			return const_cast<typename base::node_type*>(node)->value().second;
+		typename base::node_type *res = base::createNode(typename base::value_type{std::move(key), {}});
+		base::balance::insert(base::root, const_cast<typename base::node_type*>(node), res);
+		++base::nodeCount;
+		return res->value().second;
 	}
 
 	mapped_type& at(const typename base::key_type &key) {
@@ -225,3 +232,6 @@ public:
 	iterator begin() noexcept { return iterator(this->sentry.sentry, iterator::createBegin); }
 	iterator end() noexcept { return iterator(this->sentry.sentry); }
 };
+
+template<typename Key, template<typename> typename Node, typename Compare, typename Alloc>
+void swap(Tree<Key, Node, Compare, Alloc> &lhs, Tree<Key, Node, Compare, Alloc> &rhs) { lhs.swap(rhs); }

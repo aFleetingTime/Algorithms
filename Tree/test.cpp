@@ -45,39 +45,28 @@ int main()
 {
 	auto rand = std::bind(std::uniform_int_distribution<>(1, 150000000), std::default_random_engine(std::random_device()()));
 	using Map = Tree<int, node::RedBlackNode, std::greater<int>>;
-	Map t;
-	t.insert(1);
+	TreeMap<int, int, node::RedBlackNode> t;
 
-#if 0
-	Tree<int, node::RedBlackNode> tt;
-	std::swap(tt, t);
-	std::cout << "1" << std::endl;
-	t.begin();
-	std::cout << "2" << std::endl;
-	tt.begin();
-	Tree<int, RedBlackNode> t;
 	std::vector<int> v;
 	v.resize(4561213);
+	t[888888] = 12;
 	for (int i = 0; i < 4561213; ++i)
 	{
 		v[i] = rand();
-		t.insert(v[i]);
+		t.insert({v[i], i});
 	}
+	std::sort(v.begin(), v.end());
+	//v.erase(std::unique(v.begin(), v.end()), v.end());
 	std::random_shuffle(v.begin(), v.end());
-	for (int i = 0; i < 4000000; ++i)
+	int s = v.size();
+	t[13134] = 12;
+	for (int i = 0; i < v.size() - 1; ++i)
+	{
 		t.erase(t.find(v[i]));
-	Tree<int, RedBlackNode> tt;
-	tt.swap(t);
-	std::cout << std::boolalpha << isRBT(tt.pubroot(), tt.pubnull()) << std::endl;
-
-	Tree<int, RedBlackNode> a;
-	a.begin();
-	std::cout << *(--tt.end()) << std::endl;
-	std::cout << *std::max_element(v.begin() + 4000000, v.end()) << std::endl;
-	std::cout << *(tt.begin()) << std::endl;
-	std::cout << *std::min_element(v.begin() + 4000000, v.end()) << std::endl;
-	std::cout << *(t.begin()) << std::endl;
-	std::cout << *std::min_element(v.begin() + 4000000, v.end()) << std::endl;
-	std::cout << t.size() << std::endl;
-#endif
+		--s;
+	}
+	std::cout << (--t.end())->first << std::endl;
+	std::cout << v.back() << std::endl;
+	std::cout << (t.begin())->first << std::endl;
+	std::cout << t.size() << ' ' << v.size() << std::endl;
 }
