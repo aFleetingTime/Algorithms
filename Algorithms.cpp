@@ -973,7 +973,7 @@ void recMergeSort(T first, T last, Compare comp = {})
 }
 
 // 快速排序随机化版本
-// 相比与普通版本，划分更为均衡，即使输入数据处于基本有序，其运行时间依然为O(n lg n)（普通版本运行时间为O(n^2)）
+// 相比普通版本划分更均衡，即使输入数据处于基本有序，其运行时间依然为O(n lg n)（普通版本运行时间为O(n^2)）
 template<typename InputIt, typename Compare = std::less<itvalue_type<InputIt>>>
 void recQuickSort(InputIt first, InputIt last, Compare comp = {})
 {
@@ -1543,7 +1543,6 @@ bool check(const std::valarray<T> &array, size_t r, size_t s)
 	return true;
 }
 
-// test
 int main(int argv, char **)
 {
 	// timer
